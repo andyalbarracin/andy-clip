@@ -5,10 +5,10 @@ import threading
 
 import pytest
 
-from backend.app.core.errors import AppError
-from backend.app.models import jobs as job_states
-from backend.app.models import projects as project_states
-from backend.app.services.job_manager import JobBusy
+from app.core.errors import AppError
+from app.models import jobs as job_states
+from app.models import projects as project_states
+from app.services.job_manager import JobBusy
 
 TIMEOUT = 5.0
 

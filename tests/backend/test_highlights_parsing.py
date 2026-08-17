@@ -9,7 +9,7 @@ import json
 
 import pytest
 
-from shorts_generator.highlights import (
+from app.engine.highlights import (
     _parse_json_loose,
     _sanitize_highlights,
     call_highlight_api,

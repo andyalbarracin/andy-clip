@@ -270,7 +270,7 @@ def processing_options_for(
 
 def analysis_settings() -> AnalysisSettings:
     """Leer los parámetros de análisis directamente del core, sin duplicarlos."""
-    from shorts_generator import highlights as core_highlights
+    from app.engine import highlights as core_highlights
 
     return AnalysisSettings(
         long_video_threshold_seconds=core_highlights.LONG_VIDEO_THRESHOLD,

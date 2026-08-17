@@ -12,8 +12,8 @@ from typing import Union
 
 from .errors import PathValidationError
 
-# backend/app/core/paths.py → backend/app/core → backend/app → backend → PROJECT_ROOT
-PROJECT_ROOT = Path(__file__).resolve().parents[3]
+# app/core/paths.py → app/core → app → PROJECT_ROOT
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 DATA_DIR = PROJECT_ROOT / "data"
 OUTPUT_DIR = PROJECT_ROOT / "output"

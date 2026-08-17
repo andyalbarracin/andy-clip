@@ -5,8 +5,8 @@ from datetime import datetime
 
 import pytest
 
-from backend.app.core.errors import AppError
-from backend.app.models.projects import ProjectNotFound, default_project_name
+from app.core.errors import AppError
+from app.models.projects import ProjectNotFound, default_project_name
 
 OPTIONS = {"mode": "local", "num_clips": 3, "aspect_ratio": "9:16", "resolution": "720"}
 

@@ -5,7 +5,7 @@ import uuid
 
 import pytest
 
-from backend.app.core.paths import OUTPUT_DIR
+from app.core.paths import OUTPUT_DIR
 
 YOUTUBE_URL = "https://www.youtube.com/watch?v=abc123"
 

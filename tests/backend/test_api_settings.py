@@ -5,8 +5,8 @@ import json
 
 import pytest
 
-from backend.app.core.errors import ProviderAuthError
-from backend.app.services.providers.base import ProviderTestResult
+from app.core.errors import ProviderAuthError
+from app.services.providers.base import ProviderTestResult
 
 FAKE_KEY = "sk-test-0000000000000000000000004F2A"
 
@@ -28,7 +28,7 @@ class FakeProvider:
 
 @pytest.fixture
 def fake_provider(monkeypatch):
-    from backend.app.api.routes import settings as settings_routes
+    from app.api.routes import settings as settings_routes
 
     monkeypatch.setattr(settings_routes, "build_provider", lambda *a, **k: FakeProvider())
     return FakeProvider()
@@ -199,7 +199,7 @@ def test_test_connection_reports_success(client, fake_provider):
 
 
 def test_test_connection_translates_a_rejected_key(client, monkeypatch):
-    from backend.app.api.routes import settings as settings_routes
+    from app.api.routes import settings as settings_routes
 
     def explode(*args, **kwargs):
         raise ProviderAuthError("OpenAI rechazó la API key configurada.")

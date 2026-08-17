@@ -1,2 +1,23 @@
-requests>=2.31
+# Andy Clip — todo lo que necesita la aplicación para funcionar.
+
+# Backend local
+fastapi>=0.115
+uvicorn[standard]>=0.30
+pydantic>=2.7
+python-multipart>=0.0.9
 python-dotenv>=1.0
+requests>=2.31
+
+# Motor de procesamiento
+yt-dlp>=2024.1.1
+faster-whisper>=1.0.0
+opencv-python>=4.8.0
+
+# Proveedores de IA
+openai>=1.0.0
+google-genai>=1.0.0
+
+# Nota: FFmpeg no se instala por acá. Es un programa del sistema.
+#   macOS:   brew install ffmpeg
+#   Ubuntu:  sudo apt install ffmpeg
+#   Windows: https://ffmpeg.org/download.html

@@ -4,7 +4,7 @@ Escucha en 127.0.0.1: es una aplicación de escritorio servida por HTTP, no un
 servicio expuesto a la red. Arranca siempre, con o sin API keys: la falta de
 credenciales bloquea una acción puntual, nunca la apertura de la app.
 
-    .venv/bin/uvicorn backend.app.main:app --host 127.0.0.1 --port 8756
+    .venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8756
 """
 from __future__ import annotations
 
@@ -15,7 +15,8 @@ from typing import Any, AsyncIterator, Dict, List
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 
 from .api.deps import get_database
 from .api.routes import health, jobs as jobs_routes, projects as projects_routes
@@ -23,13 +24,16 @@ from .api.routes import settings as settings_routes
 from .core.errors import AppError
 from .models.jobs import JobRepository
 from .core.logging import LOG_LEVEL, get_logger, setup_logging
-from .core.paths import ensure_dirs
+from .core.paths import PROJECT_ROOT, ensure_dirs
 from .core.settings import APP_NAME, APP_VERSION
 
 logger = get_logger("andy_clip.api")
 
 DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 8756
+
+# La interfaz compilada. Con esto Andy Clip es un solo proceso.
+WEB_DIST = PROJECT_ROOT / "web" / "dist"
 
 # Orígenes del frontend en desarrollo (Vite). Sin comodines.
 DEV_ORIGINS: List[str] = [
@@ -117,7 +121,41 @@ def create_app() -> FastAPI:
     app.include_router(projects_routes.router, prefix="/api")
     app.include_router(jobs_routes.router, prefix="/api")
 
+    mount_web(app)
+
     return app
+
+
+def mount_web(app: FastAPI) -> None:
+    """Servir la interfaz ya compilada desde el mismo servidor.
+
+    Con esto Andy Clip es un solo proceso y una sola dirección. Si `web/dist`
+    todavía no existe (nadie compiló el frontend), la API sigue funcionando y
+    la raíz explica qué falta en vez de tirar un 404 mudo.
+    """
+    index = WEB_DIST / "index.html"
+
+    if index.exists():
+        assets = WEB_DIST / "assets"
+        if assets.is_dir():
+            app.mount("/assets", StaticFiles(directory=str(assets)), name="assets")
+
+    @app.get("/{full_path:path}", include_in_schema=False)
+    async def serve_web(full_path: str):
+        # Las rutas de API ya se resolvieron más arriba: si algo cae acá con
+        # prefijo /api, es que no existe.
+        if full_path.startswith("api/"):
+            return _error_response(404, "not_found", "Esa dirección no existe.")
+
+        if index.exists():
+            return FileResponse(str(index))
+
+        return _error_response(
+            503,
+            "web_not_built",
+            "La interfaz todavía no está compilada. Ejecutá ./start.sh, o "
+            "'npm install && npm run build' dentro de web/.",
+        )
 
 
 app = create_app()
@@ -127,7 +165,7 @@ def main() -> None:  # pragma: no cover - entry point
     import uvicorn
 
     uvicorn.run(
-        "backend.app.main:app",
+        "app.main:app",
         host=os.environ.get("ANDY_CLIP_HOST", DEFAULT_HOST),
         port=int(os.environ.get("ANDY_CLIP_PORT", DEFAULT_PORT)),
         log_level=LOG_LEVEL,

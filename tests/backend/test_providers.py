@@ -6,14 +6,14 @@ from types import SimpleNamespace
 
 import pytest
 
-from backend.app.core.errors import (
+from app.core.errors import (
     MissingCredentialError,
     ProviderAuthError,
     ProviderError,
 )
-from backend.app.services.providers import build_llm_fn, build_provider
-from backend.app.services.providers.gemini_provider import GeminiProvider
-from backend.app.services.providers.openai_provider import OpenAIProvider
+from app.services.providers import build_llm_fn, build_provider
+from app.services.providers.gemini_provider import GeminiProvider
+from app.services.providers.openai_provider import OpenAIProvider
 
 FAKE_KEY = "sk-test-0000000000000000000000004F2A"
 
@@ -237,7 +237,7 @@ def test_build_provider_can_target_a_specific_provider(settings_store, secrets_s
 
 def test_build_llm_fn_plugs_into_the_original_core(settings_store, secrets_service, monkeypatch):
     """El core sigue recibiendo un `llm_fn(prompt) -> str`, como lo dejó upstream."""
-    from shorts_generator.highlights import get_highlights
+    from app.engine.highlights import get_highlights
 
     canned = json.dumps(
         {

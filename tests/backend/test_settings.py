@@ -5,8 +5,8 @@ import json
 
 import pytest
 
-from backend.app.core.errors import ConfigurationError
-from backend.app.core.settings import SettingsStore
+from app.core.errors import ConfigurationError
+from app.core.settings import SettingsStore
 
 
 def test_defaults_when_nothing_is_configured(settings_store):
@@ -138,9 +138,9 @@ def test_only_touched_fields_are_written_to_disk(settings_store):
 
 
 def test_analysis_settings_mirror_the_core():
-    from shorts_generator import highlights as core_highlights
+    from app.engine import highlights as core_highlights
 
-    from backend.app.core.settings import analysis_settings
+    from app.core.settings import analysis_settings
 
     analysis = analysis_settings()
     assert analysis.chunk_size_seconds == core_highlights.CHUNK_SIZE_SECONDS

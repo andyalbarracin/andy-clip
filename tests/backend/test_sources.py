@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import pytest
 
-from backend.app.services.sources import (
+from app.services.sources import (
     SOURCE_FILE,
     SOURCE_URL,
     InvalidSourceError,

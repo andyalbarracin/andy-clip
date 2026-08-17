@@ -6,8 +6,8 @@ import stat
 
 import pytest
 
-from backend.app.core.errors import ConfigurationError, MissingCredentialError
-from backend.app.core.secrets import mask_secret
+from app.core.errors import ConfigurationError, MissingCredentialError
+from app.core.secrets import mask_secret
 
 FAKE_KEY = "sk-test-0000000000000000000000004F2A"
 
