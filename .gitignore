@@ -1,4 +1,5 @@
 .env
+.env.local
 __pycache__/
 *.pyc
 .venv/
@@ -6,3 +7,16 @@ venv/
 output/
 *.mp4
 .DS_Store
+
+# Andy Clip — app local
+.local/
+data/
+temp/
+.pytest_cache/
+.coverage
+htmlcov/
+coverage.xml
+frontend/node_modules/
+frontend/dist/
+node_modules/
+*.log

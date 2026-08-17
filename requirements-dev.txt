@@ -1,0 +1,5 @@
+# Andy Clip — dependencias de desarrollo y testing.
+-r requirements-app.txt
+
+pytest>=8.0
+pytest-cov>=5.0
