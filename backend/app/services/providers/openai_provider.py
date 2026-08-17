@@ -1,0 +1,93 @@
+"""Proveedor OpenAI.
+
+Reproduce la llamada que ya hacía `shorts_generator/local/llm.py` para no
+cambiar el comportamiento del motor: mismo endpoint, misma temperatura.
+"""
+from __future__ import annotations
+
+from typing import List
+
+from ...core.errors import DependencyMissingError
+from .base import ProviderTestResult, translate_provider_error
+
+# Lista de arranque para el selector. No pretende estar completa ni actualizada:
+# el botón "Actualizar modelos" consulta la API oficial y la reemplaza.
+SUGGESTED_MODELS: List[str] = ["gpt-4o-mini", "gpt-4o", "gpt-4.1-mini", "gpt-4.1"]
+
+_EXCLUDED_MODEL_MARKERS = (
+    "audio", "realtime", "transcribe", "tts", "whisper", "embedding",
+    "image", "dall-e", "moderation", "sora", "codex",
+)
+
+
+class OpenAIProvider:
+    name = "openai"
+    label = "OpenAI"
+
+    def __init__(self, api_key: str, model: str, timeout: float = 60.0) -> None:
+        self._api_key = api_key
+        self.model = model
+        self._timeout = timeout
+
+    # ── cliente ──────────────────────────────────────────────────────────────
+
+    def _client(self):
+        try:
+            from openai import OpenAI  # type: ignore
+        except ImportError as exc:
+            raise DependencyMissingError(
+                "Falta el paquete de OpenAI en este entorno.",
+                detail="pip install -r requirements-app.txt",
+            ) from exc
+        return OpenAI(api_key=self._api_key, timeout=self._timeout)
+
+    # ── contrato ─────────────────────────────────────────────────────────────
+
+    def generate(self, prompt: str) -> str:
+        try:
+            response = self._client().chat.completions.create(
+                model=self.model,
+                temperature=0.7,
+                messages=[{"role": "user", "content": prompt}],
+            )
+        except Exception as exc:
+            raise translate_provider_error(exc, self.label) from exc
+        return response.choices[0].message.content or ""
+
+    def list_models(self) -> List[str]:
+        try:
+            listing = self._client().models.list()
+        except Exception as exc:
+            raise translate_provider_error(exc, self.label) from exc
+
+        models = []
+        for item in listing:
+            model_id = getattr(item, "id", None) or ""
+            if not model_id or not _looks_like_chat_model(model_id):
+                continue
+            models.append(model_id)
+        return sorted(set(models))
+
+    def test_connection(self) -> ProviderTestResult:
+        models = self.list_models()
+        if models and self.model not in models:
+            return ProviderTestResult(
+                ok=True,
+                message=(
+                    "Conectamos con OpenAI, pero el modelo «{0}» no aparece entre los "
+                    "disponibles para esta cuenta.".format(self.model)
+                ),
+                models=models,
+            )
+        return ProviderTestResult(
+            ok=True,
+            message="Conectamos con OpenAI. El modelo «{0}» está disponible.".format(self.model),
+            models=models,
+        )
+
+
+def _looks_like_chat_model(model_id: str) -> bool:
+    lowered = model_id.lower()
+    if any(marker in lowered for marker in _EXCLUDED_MODEL_MARKERS):
+        return False
+    return lowered.startswith("gpt-") or lowered.startswith("o1") or lowered.startswith("o3") or lowered.startswith("o4")

@@ -1,0 +1,393 @@
+"""Configuración de Andy Clip y su precedencia.
+
+Precedencia, de mayor a menor (documentada también en `docs/ARCHITECTURE.md`):
+
+    1. configuración guardada por la aplicación  (.local/settings.json)
+    2. variables de entorno                      (las mismas que usa el core)
+    3. defaults del código
+
+`.local/settings.json` guarda **solo** los campos que la persona tocó desde la
+UI. Lo que no está ahí sigue resolviéndose por env var, así que quien prefiera
+manejar el proyecto con un `.env` no pierde nada al abrir la aplicación.
+"""
+from __future__ import annotations
+
+import json
+import os
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any, Callable, Dict, Optional, Tuple
+
+from pydantic import BaseModel, Field, ValidationError, field_validator
+
+from .errors import ConfigurationError, PathValidationError
+from .paths import LOCAL_DIR, PROJECT_ROOT, ensure_within
+
+APP_NAME = "Andy Clip"
+APP_VERSION = "0.1.0"
+
+PROVIDERS: Tuple[str, ...] = ("openai", "gemini")
+MODES: Tuple[str, ...] = ("local", "muapi")
+ASPECT_RATIOS: Tuple[str, ...] = ("9:16", "1:1", "4:5")
+RESOLUTIONS: Tuple[str, ...] = ("360", "480", "720", "1080")
+WHISPER_MODELS: Tuple[str, ...] = ("tiny", "base", "small", "medium", "large-v3")
+WHISPER_DEVICES: Tuple[str, ...] = ("auto", "cpu", "cuda")
+
+MAX_CLIPS = 10
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Modelos
+# ─────────────────────────────────────────────────────────────────────────────
+
+class AISettings(BaseModel):
+    provider: str = "openai"
+    openai_model: str = "gpt-4o-mini"
+    gemini_model: str = "gemini-2.5-flash"
+
+    @field_validator("provider")
+    @classmethod
+    def _check_provider(cls, value: str) -> str:
+        value = (value or "").strip().lower()
+        if value not in PROVIDERS:
+            raise ValueError(
+                "Proveedor de IA desconocido: {0!r}. Elegí entre {1}.".format(
+                    value, ", ".join(PROVIDERS)
+                )
+            )
+        return value
+
+    @field_validator("openai_model", "gemini_model")
+    @classmethod
+    def _check_model(cls, value: str) -> str:
+        value = (value or "").strip()
+        if not value:
+            raise ValueError("El modelo no puede quedar vacío.")
+        if len(value) > 120:
+            raise ValueError("El nombre del modelo es demasiado largo.")
+        return value
+
+
+class TranscriptionSettings(BaseModel):
+    whisper_model: str = "base"
+    device: str = "auto"
+    vad_filter: bool = False
+    language: Optional[str] = None  # None = detectar automáticamente
+
+    @field_validator("whisper_model")
+    @classmethod
+    def _check_whisper_model(cls, value: str) -> str:
+        value = (value or "").strip()
+        if value not in WHISPER_MODELS:
+            raise ValueError(
+                "Modelo de Whisper desconocido: {0!r}. Elegí entre {1}.".format(
+                    value, ", ".join(WHISPER_MODELS)
+                )
+            )
+        return value
+
+    @field_validator("device")
+    @classmethod
+    def _check_device(cls, value: str) -> str:
+        value = (value or "").strip().lower()
+        if value not in WHISPER_DEVICES:
+            raise ValueError(
+                "Dispositivo desconocido: {0!r}. Elegí entre {1}.".format(
+                    value, ", ".join(WHISPER_DEVICES)
+                )
+            )
+        return value
+
+    @field_validator("language")
+    @classmethod
+    def _check_language(cls, value: Optional[str]) -> Optional[str]:
+        if value is None:
+            return None
+        value = value.strip().lower()
+        if not value or value in ("auto", "detect"):
+            return None
+        # ISO-639-1 (es, en) con variante regional opcional (pt-br).
+        if len(value) > 5 or not value.replace("-", "").isalpha():
+            raise ValueError("Código de idioma inválido: {0!r}.".format(value))
+        return value
+
+
+class VideoSettings(BaseModel):
+    aspect_ratio: str = "9:16"
+    num_clips: int = 3
+    resolution: str = "720"
+    output_dir: str = "output"
+
+    @field_validator("aspect_ratio")
+    @classmethod
+    def _check_aspect_ratio(cls, value: str) -> str:
+        value = (value or "").strip()
+        if value not in ASPECT_RATIOS:
+            raise ValueError(
+                "Relación de aspecto no soportada: {0!r}. Elegí entre {1}.".format(
+                    value, ", ".join(ASPECT_RATIOS)
+                )
+            )
+        return value
+
+    @field_validator("resolution")
+    @classmethod
+    def _check_resolution(cls, value: str) -> str:
+        value = str(value or "").strip().replace("p", "")
+        if value not in RESOLUTIONS:
+            raise ValueError(
+                "Resolución no soportada: {0!r}. Elegí entre {1}.".format(
+                    value, ", ".join(RESOLUTIONS)
+                )
+            )
+        return value
+
+    @field_validator("num_clips")
+    @classmethod
+    def _check_num_clips(cls, value: int) -> int:
+        if value < 1 or value > MAX_CLIPS:
+            raise ValueError(
+                "La cantidad de clips tiene que estar entre 1 y {0}.".format(MAX_CLIPS)
+            )
+        return value
+
+    @field_validator("output_dir")
+    @classmethod
+    def _check_output_dir(cls, value: str) -> str:
+        value = (value or "").strip() or "output"
+        # Anti path traversal: la carpeta de resultados vive dentro del proyecto.
+        try:
+            ensure_within(PROJECT_ROOT, value)
+        except PathValidationError as exc:
+            # Pydantic solo envuelve ValueError; lo traducimos para que el error
+            # llegue como ConfigurationError con el mensaje en castellano.
+            raise ValueError(exc.message) from exc
+        return value
+
+
+class AnalysisSettings(BaseModel):
+    """Parámetros del análisis. Solo lectura en V1: los define el core."""
+
+    ideal_duration_seconds: Tuple[int, int] = (45, 90)
+    long_video_threshold_seconds: int = 1800
+    chunk_size_seconds: int = 1200
+    chunk_overlap_seconds: int = 60
+    max_llm_attempts: int = 3
+
+
+class AppSettings(BaseModel):
+    mode: str = "local"
+    ai: AISettings = Field(default_factory=AISettings)
+    transcription: TranscriptionSettings = Field(default_factory=TranscriptionSettings)
+    video: VideoSettings = Field(default_factory=VideoSettings)
+
+    @field_validator("mode")
+    @classmethod
+    def _check_mode(cls, value: str) -> str:
+        value = (value or "").strip().lower()
+        if value not in MODES:
+            raise ValueError(
+                "Modo desconocido: {0!r}. Elegí entre {1}.".format(value, ", ".join(MODES))
+            )
+        return value
+
+    def resolved_output_dir(self) -> Path:
+        return ensure_within(PROJECT_ROOT, self.video.output_dir)
+
+
+def analysis_settings() -> AnalysisSettings:
+    """Leer los parámetros de análisis directamente del core, sin duplicarlos."""
+    from shorts_generator import highlights as core_highlights
+
+    return AnalysisSettings(
+        long_video_threshold_seconds=core_highlights.LONG_VIDEO_THRESHOLD,
+        chunk_size_seconds=core_highlights.CHUNK_SIZE_SECONDS,
+        chunk_overlap_seconds=core_highlights.CHUNK_OVERLAP_SECONDS,
+        max_llm_attempts=core_highlights.MAX_HIGHLIGHT_API_ATTEMPTS,
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Precedencia
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _as_bool(raw: str) -> bool:
+    return raw.strip().lower() in ("1", "true", "yes", "on")
+
+
+def _as_int(raw: str) -> int:
+    return int(raw.strip())
+
+
+def _as_str(raw: str) -> str:
+    return raw.strip()
+
+
+@dataclass(frozen=True)
+class FieldSpec:
+    """Un campo de configuración y de dónde puede venir su valor."""
+
+    path: str
+    env: Optional[str]
+    cast: Callable[[str], Any]
+
+
+FIELD_SPECS: Tuple[FieldSpec, ...] = (
+    FieldSpec("mode", "ANDY_CLIP_MODE", _as_str),
+    FieldSpec("ai.provider", "LLM_PROVIDER", _as_str),
+    FieldSpec("ai.openai_model", "OPENAI_MODEL", _as_str),
+    FieldSpec("ai.gemini_model", "GEMINI_MODEL", _as_str),
+    FieldSpec("transcription.whisper_model", "LOCAL_WHISPER_MODEL", _as_str),
+    FieldSpec("transcription.device", "LOCAL_WHISPER_DEVICE", _as_str),
+    FieldSpec("transcription.vad_filter", "LOCAL_WHISPER_VAD_FILTER", _as_bool),
+    FieldSpec("transcription.language", "LOCAL_WHISPER_LANGUAGE", _as_str),
+    FieldSpec("video.aspect_ratio", "ANDY_CLIP_ASPECT_RATIO", _as_str),
+    FieldSpec("video.num_clips", "ANDY_CLIP_NUM_CLIPS", _as_int),
+    FieldSpec("video.resolution", "ANDY_CLIP_RESOLUTION", _as_str),
+    FieldSpec("video.output_dir", "LOCAL_OUTPUT_DIR", _as_str),
+)
+
+
+def _get_nested(data: Dict[str, Any], path: str) -> Any:
+    node: Any = data
+    for part in path.split("."):
+        if not isinstance(node, dict) or part not in node:
+            return None
+        node = node[part]
+    return node
+
+
+def _has_nested(data: Dict[str, Any], path: str) -> bool:
+    node: Any = data
+    for part in path.split("."):
+        if not isinstance(node, dict) or part not in node:
+            return False
+        node = node[part]
+    return True
+
+
+def _set_nested(data: Dict[str, Any], path: str, value: Any) -> None:
+    parts = path.split(".")
+    node = data
+    for part in parts[:-1]:
+        node = node.setdefault(part, {})
+    node[parts[-1]] = value
+
+
+def _merge(base: Dict[str, Any], patch: Dict[str, Any]) -> Dict[str, Any]:
+    """Merge recursivo: el patch pisa hoja por hoja, no rama por rama."""
+    merged = dict(base)
+    for key, value in patch.items():
+        if isinstance(value, dict) and isinstance(merged.get(key), dict):
+            merged[key] = _merge(merged[key], value)
+        else:
+            merged[key] = value
+    return merged
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Store
+# ─────────────────────────────────────────────────────────────────────────────
+
+SETTINGS_FILENAME = "settings.json"
+
+
+class SettingsStore:
+    """Lee y escribe los overrides de configuración de la aplicación."""
+
+    def __init__(self, path: Optional[Path] = None) -> None:
+        self.path = Path(path) if path is not None else (LOCAL_DIR / SETTINGS_FILENAME)
+
+    # ── lectura ──────────────────────────────────────────────────────────────
+
+    def read_overrides(self) -> Dict[str, Any]:
+        if not self.path.exists():
+            return {}
+        try:
+            raw = json.loads(self.path.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError) as exc:
+            raise ConfigurationError(
+                "No pudimos leer la configuración guardada.",
+                detail="{0}: {1}".format(self.path, exc),
+            ) from exc
+        return raw if isinstance(raw, dict) else {}
+
+    def resolve(self) -> AppSettings:
+        """Aplicar la precedencia y validar el resultado."""
+        overrides = self.read_overrides()
+        return self._build(overrides)
+
+    def sources(self) -> Dict[str, str]:
+        """Para cada campo, de dónde salió el valor efectivo."""
+        overrides = self.read_overrides()
+        result: Dict[str, str] = {}
+        for spec in FIELD_SPECS:
+            if _has_nested(overrides, spec.path):
+                result[spec.path] = "app"
+            elif spec.env and os.environ.get(spec.env, "").strip():
+                result[spec.path] = "env"
+            else:
+                result[spec.path] = "default"
+        return result
+
+    # ── escritura ────────────────────────────────────────────────────────────
+
+    def update(self, patch: Dict[str, Any]) -> AppSettings:
+        """Validar el patch contra la configuración completa y recién ahí guardar."""
+        overrides = _merge(self.read_overrides(), patch)
+        settings = self._build(overrides)  # levanta ConfigurationError si algo no cierra
+        self._write(overrides)
+        return settings
+
+    def reset(self) -> AppSettings:
+        """Volver a env vars + defaults."""
+        if self.path.exists():
+            self.path.unlink()
+        return self.resolve()
+
+    # ── internos ─────────────────────────────────────────────────────────────
+
+    def _build(self, overrides: Dict[str, Any]) -> AppSettings:
+        data: Dict[str, Any] = {}
+        for spec in FIELD_SPECS:
+            if _has_nested(overrides, spec.path):
+                _set_nested(data, spec.path, _get_nested(overrides, spec.path))
+                continue
+            raw = os.environ.get(spec.env, "") if spec.env else ""
+            if raw.strip():
+                try:
+                    _set_nested(data, spec.path, spec.cast(raw))
+                except (TypeError, ValueError) as exc:
+                    raise ConfigurationError(
+                        "La variable de entorno {0} tiene un valor inválido.".format(spec.env),
+                        detail="{0}={1!r}: {2}".format(spec.env, raw, exc),
+                    ) from exc
+        try:
+            return AppSettings.model_validate(data)
+        except ValidationError as exc:
+            raise ConfigurationError(
+                _first_message(exc),
+                detail=str(exc),
+                action="settings",
+            ) from exc
+
+    def _write(self, overrides: Dict[str, Any]) -> None:
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        tmp_path = self.path.with_suffix(".json.tmp")
+        tmp_path.write_text(
+            json.dumps(overrides, indent=2, ensure_ascii=False, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        os.replace(str(tmp_path), str(self.path))
+
+
+def _first_message(exc: ValidationError) -> str:
+    """Sacar el mensaje en castellano que escribimos en el validator."""
+    for error in exc.errors():
+        message = str(error.get("msg", ""))
+        # Pydantic prefija los ValueError propios con "Value error, ".
+        if message.startswith("Value error, "):
+            return message[len("Value error, "):]
+        if message:
+            return message
+    return "La configuración no es válida."
