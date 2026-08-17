@@ -45,6 +45,64 @@ MAX_CLIPS = 10
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Validaciones compartidas
+#
+# Viven sueltas para que la configuración global y las opciones de un proyecto
+# apliquen exactamente las mismas reglas.
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _one_of(value: Any, allowed: Tuple[str, ...], what: str) -> str:
+    value = str(value or "").strip()
+    if value not in allowed:
+        raise ValueError(
+            "{0} no soportado: {1!r}. Elegí entre {2}.".format(what, value, ", ".join(allowed))
+        )
+    return value
+
+
+def validate_mode(value: str) -> str:
+    return _one_of(str(value or "").lower(), MODES, "Modo")
+
+
+def validate_provider(value: str) -> str:
+    return _one_of(str(value or "").lower(), PROVIDERS, "Proveedor de IA")
+
+
+def validate_aspect_ratio(value: str) -> str:
+    return _one_of(value, ASPECT_RATIOS, "Relación de aspecto")
+
+
+def validate_resolution(value: Any) -> str:
+    return _one_of(str(value or "").strip().replace("p", ""), RESOLUTIONS, "Resolución")
+
+
+def validate_whisper_model(value: str) -> str:
+    return _one_of(value, WHISPER_MODELS, "Modelo de Whisper")
+
+
+def validate_device(value: str) -> str:
+    return _one_of(str(value or "").lower(), WHISPER_DEVICES, "Dispositivo")
+
+
+def validate_num_clips(value: int) -> int:
+    if value < 1 or value > MAX_CLIPS:
+        raise ValueError("La cantidad de clips tiene que estar entre 1 y {0}.".format(MAX_CLIPS))
+    return value
+
+
+def validate_language(value: Optional[str]) -> Optional[str]:
+    if value is None:
+        return None
+    value = value.strip().lower()
+    if not value or value in ("auto", "detect"):
+        return None
+    # ISO-639-1 (es, en) con variante regional opcional (pt-br).
+    if len(value) > 5 or not value.replace("-", "").isalpha():
+        raise ValueError("Código de idioma inválido: {0!r}.".format(value))
+    return value
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Modelos
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -56,14 +114,7 @@ class AISettings(BaseModel):
     @field_validator("provider")
     @classmethod
     def _check_provider(cls, value: str) -> str:
-        value = (value or "").strip().lower()
-        if value not in PROVIDERS:
-            raise ValueError(
-                "Proveedor de IA desconocido: {0!r}. Elegí entre {1}.".format(
-                    value, ", ".join(PROVIDERS)
-                )
-            )
-        return value
+        return validate_provider(value)
 
     @field_validator("openai_model", "gemini_model")
     @classmethod
@@ -85,39 +136,17 @@ class TranscriptionSettings(BaseModel):
     @field_validator("whisper_model")
     @classmethod
     def _check_whisper_model(cls, value: str) -> str:
-        value = (value or "").strip()
-        if value not in WHISPER_MODELS:
-            raise ValueError(
-                "Modelo de Whisper desconocido: {0!r}. Elegí entre {1}.".format(
-                    value, ", ".join(WHISPER_MODELS)
-                )
-            )
-        return value
+        return validate_whisper_model(value)
 
     @field_validator("device")
     @classmethod
     def _check_device(cls, value: str) -> str:
-        value = (value or "").strip().lower()
-        if value not in WHISPER_DEVICES:
-            raise ValueError(
-                "Dispositivo desconocido: {0!r}. Elegí entre {1}.".format(
-                    value, ", ".join(WHISPER_DEVICES)
-                )
-            )
-        return value
+        return validate_device(value)
 
     @field_validator("language")
     @classmethod
     def _check_language(cls, value: Optional[str]) -> Optional[str]:
-        if value is None:
-            return None
-        value = value.strip().lower()
-        if not value or value in ("auto", "detect"):
-            return None
-        # ISO-639-1 (es, en) con variante regional opcional (pt-br).
-        if len(value) > 5 or not value.replace("-", "").isalpha():
-            raise ValueError("Código de idioma inválido: {0!r}.".format(value))
-        return value
+        return validate_language(value)
 
 
 class VideoSettings(BaseModel):
@@ -129,35 +158,17 @@ class VideoSettings(BaseModel):
     @field_validator("aspect_ratio")
     @classmethod
     def _check_aspect_ratio(cls, value: str) -> str:
-        value = (value or "").strip()
-        if value not in ASPECT_RATIOS:
-            raise ValueError(
-                "Relación de aspecto no soportada: {0!r}. Elegí entre {1}.".format(
-                    value, ", ".join(ASPECT_RATIOS)
-                )
-            )
-        return value
+        return validate_aspect_ratio(value)
 
     @field_validator("resolution")
     @classmethod
     def _check_resolution(cls, value: str) -> str:
-        value = str(value or "").strip().replace("p", "")
-        if value not in RESOLUTIONS:
-            raise ValueError(
-                "Resolución no soportada: {0!r}. Elegí entre {1}.".format(
-                    value, ", ".join(RESOLUTIONS)
-                )
-            )
-        return value
+        return validate_resolution(value)
 
     @field_validator("num_clips")
     @classmethod
     def _check_num_clips(cls, value: int) -> int:
-        if value < 1 or value > MAX_CLIPS:
-            raise ValueError(
-                "La cantidad de clips tiene que estar entre 1 y {0}.".format(MAX_CLIPS)
-            )
-        return value
+        return validate_num_clips(value)
 
     @field_validator("output_dir")
     @classmethod
@@ -192,15 +203,69 @@ class AppSettings(BaseModel):
     @field_validator("mode")
     @classmethod
     def _check_mode(cls, value: str) -> str:
-        value = (value or "").strip().lower()
-        if value not in MODES:
-            raise ValueError(
-                "Modo desconocido: {0!r}. Elegí entre {1}.".format(value, ", ".join(MODES))
-            )
-        return value
+        return validate_mode(value)
 
     def resolved_output_dir(self) -> Path:
         return ensure_within(PROJECT_ROOT, self.video.output_dir)
+
+
+class ProcessingOptions(BaseModel):
+    """Opciones con las que se procesa **un** proyecto.
+
+    Salen de la configuración global y la persona puede pisarlas en el
+    formulario de "Nuevo proyecto". Se guardan junto al proyecto para que el
+    resultado quede explicado por sus propias opciones y no por la config que
+    haya en ese momento.
+    """
+
+    mode: str = "local"
+    num_clips: int = 3
+    aspect_ratio: str = "9:16"
+    resolution: str = "720"
+    language: Optional[str] = None
+
+    @field_validator("mode")
+    @classmethod
+    def _check_mode(cls, value: str) -> str:
+        return validate_mode(value)
+
+    @field_validator("num_clips")
+    @classmethod
+    def _check_num_clips(cls, value: int) -> int:
+        return validate_num_clips(value)
+
+    @field_validator("aspect_ratio")
+    @classmethod
+    def _check_aspect_ratio(cls, value: str) -> str:
+        return validate_aspect_ratio(value)
+
+    @field_validator("resolution")
+    @classmethod
+    def _check_resolution(cls, value: str) -> str:
+        return validate_resolution(value)
+
+    @field_validator("language")
+    @classmethod
+    def _check_language(cls, value: Optional[str]) -> Optional[str]:
+        return validate_language(value)
+
+
+def processing_options_for(
+    settings: AppSettings, overrides: Optional[Dict[str, Any]] = None
+) -> ProcessingOptions:
+    """Defaults de la configuración global + lo que la persona haya cambiado."""
+    data: Dict[str, Any] = {
+        "mode": settings.mode,
+        "num_clips": settings.video.num_clips,
+        "aspect_ratio": settings.video.aspect_ratio,
+        "resolution": settings.video.resolution,
+        "language": settings.transcription.language,
+    }
+    data.update({k: v for k, v in (overrides or {}).items() if v is not None})
+    try:
+        return ProcessingOptions.model_validate(data)
+    except ValidationError as exc:
+        raise ConfigurationError(_first_message(exc), detail=str(exc)) from exc
 
 
 def analysis_settings() -> AnalysisSettings:

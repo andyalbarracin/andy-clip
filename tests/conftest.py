@@ -53,16 +53,57 @@ def secrets_service(tmp_path):
 
 
 @pytest.fixture
-def client(settings_store, secrets_service):
-    """Cliente HTTP con la configuración y los secrets apuntando a tmp_path."""
+def database(tmp_path, monkeypatch):
+    """Base SQLite temporal, también para el `get_database()` del startup."""
+    from backend.app.api import deps
+    from backend.app.models import db as db_module
+
+    monkeypatch.setattr(db_module, "DATA_DIR", tmp_path)
+    deps.get_database.cache_clear()
+
+    instance = db_module.Database()
+    instance.initialize()
+    yield instance
+
+    deps.shutdown_job_managers()
+    deps.get_database.cache_clear()
+
+
+@pytest.fixture
+def projects_repo(database):
+    from backend.app.models.projects import ProjectRepository
+
+    return ProjectRepository(database)
+
+
+@pytest.fixture
+def jobs_repo(database):
+    from backend.app.models.jobs import JobRepository
+
+    return JobRepository(database)
+
+
+@pytest.fixture
+def job_manager(jobs_repo, projects_repo):
+    from backend.app.services.job_manager import JobManager
+
+    manager = JobManager(jobs_repo, projects_repo)
+    yield manager
+    manager.shutdown()
+
+
+@pytest.fixture
+def client(settings_store, secrets_service, database):
+    """Cliente HTTP con configuración, secrets y base apuntando a tmp_path."""
     from fastapi.testclient import TestClient
 
-    from backend.app.api.deps import get_secrets, get_settings_store
+    from backend.app.api.deps import get_database, get_secrets, get_settings_store
     from backend.app.main import create_app
 
     app = create_app()
     app.dependency_overrides[get_settings_store] = lambda: settings_store
     app.dependency_overrides[get_secrets] = lambda: secrets_service
+    app.dependency_overrides[get_database] = lambda: database
     # raise_server_exceptions=False para poder verificar el handler de 500.
     with TestClient(app, raise_server_exceptions=False) as test_client:
         yield test_client

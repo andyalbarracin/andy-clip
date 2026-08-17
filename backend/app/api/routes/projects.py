@@ -1,0 +1,174 @@
+"""Proyectos: alta, listado, detalle, renombrar y eliminar del historial."""
+from __future__ import annotations
+
+from pathlib import Path
+from typing import Any, Dict
+
+from fastapi import APIRouter, Depends, Query
+from fastapi.responses import FileResponse
+
+from ...core.errors import AppError
+from ...core.paths import PROJECT_ROOT, ensure_within
+from ...core.secrets import SecretsService
+from ...core.settings import SettingsStore, processing_options_for
+from ...models.jobs import JobRepository
+from ...models.projects import ProjectNotFound, ProjectRepository
+from ...schemas.projects import ProjectCreate, ProjectRename
+from ...services import diagnostics
+from ...services.sources import classify_source
+from ..deps import get_jobs, get_projects, get_secrets, get_settings_store
+
+router = APIRouter(tags=["proyectos"])
+
+
+def _detail(
+    project_id: str, projects: ProjectRepository, jobs: JobRepository
+) -> Dict[str, Any]:
+    project = projects.get(project_id)
+    return {
+        "project": project,
+        "highlights": projects.highlights(project_id),
+        "clips": projects.clips(project_id),
+        "job": jobs.latest_for_project(project_id),
+    }
+
+
+@router.get("/home")
+def home(
+    projects: ProjectRepository = Depends(get_projects),
+    secrets: SecretsService = Depends(get_secrets),
+) -> Dict[str, Any]:
+    """Lo que necesita el Inicio en una sola llamada."""
+    return {
+        "recent_projects": projects.list(limit=5),
+        "recent_clips": projects.recent_clips(limit=6),
+        "total_projects": projects.count(),
+        "system": [c.as_dict() for c in diagnostics.home_components(secrets)],
+        "local_mode": diagnostics.local_mode_is_ready(secrets),
+    }
+
+
+@router.post("/projects", status_code=201)
+def create_project(
+    body: ProjectCreate,
+    projects: ProjectRepository = Depends(get_projects),
+    jobs: JobRepository = Depends(get_jobs),
+    store: SettingsStore = Depends(get_settings_store),
+) -> Dict[str, Any]:
+    source_type, source = classify_source(body.source)
+    options = processing_options_for(
+        store.resolve(),
+        body.options.model_dump(exclude_unset=True) if body.options else None,
+    )
+    project = projects.create(
+        source=source,
+        source_type=source_type,
+        settings=options.model_dump(),
+        name=body.name,
+    )
+    return _detail(project["id"], projects, jobs)
+
+
+@router.get("/projects")
+def list_projects(
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
+    projects: ProjectRepository = Depends(get_projects),
+) -> Dict[str, Any]:
+    return {
+        "projects": projects.list(limit=limit, offset=offset),
+        "total": projects.count(),
+    }
+
+
+@router.get("/projects/{project_id}")
+def read_project(
+    project_id: str,
+    projects: ProjectRepository = Depends(get_projects),
+    jobs: JobRepository = Depends(get_jobs),
+) -> Dict[str, Any]:
+    return _detail(project_id, projects, jobs)
+
+
+@router.patch("/projects/{project_id}")
+def rename_project(
+    project_id: str,
+    body: ProjectRename,
+    projects: ProjectRepository = Depends(get_projects),
+    jobs: JobRepository = Depends(get_jobs),
+) -> Dict[str, Any]:
+    projects.rename(project_id, body.name)
+    return _detail(project_id, projects, jobs)
+
+
+@router.delete("/projects/{project_id}")
+def delete_project(
+    project_id: str,
+    projects: ProjectRepository = Depends(get_projects),
+) -> Dict[str, Any]:
+    """Elimina el proyecto del historial.
+
+    No borra el video original ni los clips ya generados: quedan en disco.
+    """
+    projects.delete(project_id)
+    return {"deleted": project_id, "files_kept": True}
+
+
+@router.get("/projects/{project_id}/transcript")
+def read_transcript(
+    project_id: str,
+    projects: ProjectRepository = Depends(get_projects),
+) -> Dict[str, Any]:
+    project = projects.get(project_id)
+    transcript = project.get("transcript") or {"duration": 0, "segments": []}
+    return {
+        "duration": transcript.get("duration", 0),
+        "segments": transcript.get("segments", []),
+    }
+
+
+@router.get("/projects/{project_id}/highlights")
+def read_highlights(
+    project_id: str,
+    projects: ProjectRepository = Depends(get_projects),
+) -> Dict[str, Any]:
+    projects.get(project_id)
+    return {"highlights": projects.highlights(project_id)}
+
+
+@router.get("/projects/{project_id}/clips")
+def read_clips(
+    project_id: str,
+    projects: ProjectRepository = Depends(get_projects),
+) -> Dict[str, Any]:
+    projects.get(project_id)
+    return {"clips": projects.clips(project_id)}
+
+
+@router.get("/clips/{clip_id}/file")
+def read_clip_file(
+    clip_id: str,
+    download: bool = Query(default=False),
+    projects: ProjectRepository = Depends(get_projects),
+) -> FileResponse:
+    """Servir el mp4 para el preview y la descarga.
+
+    El path sale de la base (lo escribimos nosotros), pero igual lo validamos
+    contra PROJECT_ROOT antes de abrirlo.
+    """
+    clip = projects.clip(clip_id)
+    if not clip.get("path"):
+        raise ProjectNotFound("Ese clip todavía no tiene archivo.")
+
+    path = ensure_within(PROJECT_ROOT, clip["path"])
+    if not Path(path).is_file():
+        raise AppError(
+            "No encontramos el archivo del clip. Puede que lo hayas movido o borrado.",
+            detail="missing clip file: {0}".format(path),
+        )
+
+    return FileResponse(
+        path,
+        media_type="video/mp4",
+        filename=Path(path).name if download else None,
+    )

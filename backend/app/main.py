@@ -9,15 +9,19 @@ credenciales bloquea una acción puntual, nunca la apertura de la app.
 from __future__ import annotations
 
 import os
-from typing import Any, Dict, List
+from contextlib import asynccontextmanager
+from typing import Any, AsyncIterator, Dict, List
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from .api.routes import health, settings as settings_routes
+from .api.deps import get_database
+from .api.routes import health, jobs as jobs_routes, projects as projects_routes
+from .api.routes import settings as settings_routes
 from .core.errors import AppError
+from .models.jobs import JobRepository
 from .core.logging import LOG_LEVEL, get_logger, setup_logging
 from .core.paths import ensure_dirs
 from .core.settings import APP_NAME, APP_VERSION
@@ -46,6 +50,18 @@ def _error_response(
     return JSONResponse(status_code=status_code, content={"error": payload})
 
 
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    database = get_database()
+    database.initialize()
+    # Si el backend se cerró en medio de un procesamiento, esos jobs quedaron
+    # sin worker: los cerramos para no mostrar un progreso eterno.
+    orphans = JobRepository(database).reset_orphans()
+    if orphans:
+        logger.info("closed %s interrupted job(s) from a previous run", orphans)
+    yield
+
+
 def create_app() -> FastAPI:
     setup_logging(LOG_LEVEL)
     ensure_dirs()
@@ -56,6 +72,7 @@ def create_app() -> FastAPI:
         description="Backend local de {0}.".format(APP_NAME),
         docs_url="/api/docs",
         openapi_url="/api/openapi.json",
+        lifespan=lifespan,
     )
 
     app.add_middleware(
@@ -97,6 +114,8 @@ def create_app() -> FastAPI:
 
     app.include_router(health.router, prefix="/api")
     app.include_router(settings_routes.router, prefix="/api")
+    app.include_router(projects_routes.router, prefix="/api")
+    app.include_router(jobs_routes.router, prefix="/api")
 
     return app
 
