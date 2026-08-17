@@ -17,5 +17,8 @@
     "verbatimModuleSyntax": true,
     "types": ["vite/client", "vitest/globals", "@testing-library/jest-dom"]
   },
-  "include": ["src", "vite.config.ts"]
+  // vite.config.ts queda afuera a propósito: los tipos del plugin de Vite usan
+  // sintaxis más nueva que el TypeScript 5.4 que pide Atlassian Design System.
+  // Vite compila su config con esbuild, así que no la necesita chequeada acá.
+  "include": ["src"]
 }
