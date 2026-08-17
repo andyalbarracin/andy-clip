@@ -1,0 +1,144 @@
+import { useQuery } from "@tanstack/react-query";
+import { useParams } from "react-router-dom";
+
+import { api } from "../lib/api";
+import { duration, shortDate, timecode } from "../lib/format";
+import { EmptyState, ErrorNote, Panel } from "../components/ui";
+import { SourceTimeline } from "../components/SourceTimeline";
+import "./ProjectDetail.css";
+
+export function ProjectDetail() {
+  const { id = "" } = useParams();
+
+  const { data, isLoading, error } = useQuery({
+    queryKey: ["project", id],
+    queryFn: () => api.project(id),
+  });
+
+  if (isLoading) return <p className="muted">Cargando…</p>;
+  if (error) return <ErrorNote message={(error as Error).message} />;
+  if (!data) return null;
+
+  const { project, highlights, clips } = data;
+  const total = project.duration ?? project.transcript?.duration ?? 0;
+
+  return (
+    <div className="detail">
+      <header className="detail__head">
+        <h1>{project.name}</h1>
+        <p className="detail__source mono">{project.source}</p>
+      </header>
+
+      {project.error && <ErrorNote message={project.error} />}
+
+      {/* La barra del material: dónde cae cada momento dentro del video. */}
+      {total > 0 && highlights.length > 0 && (
+        <Panel title="Mapa del video">
+          <SourceTimeline
+            duration={total}
+            size="lg"
+            segments={highlights.map((highlight) => ({
+              id: highlight.id,
+              start: highlight.start_time,
+              end: highlight.end_time,
+              selected: highlight.selected,
+              title: highlight.title,
+              score: highlight.score,
+            }))}
+          />
+          <p className="detail__legend">
+            <span className="detail__legend-key detail__legend-key--selected" />
+            Elegidos para recortar
+            <span className="detail__legend-key detail__legend-key--discarded" />
+            Detectados pero descartados
+            <span className="detail__legend-total mono">{duration(total)}</span>
+          </p>
+        </Panel>
+      )}
+
+      <Panel title="Clips">
+        {clips.length === 0 ? (
+          <EmptyState
+            title="Este proyecto todavía no tiene clips."
+            hint="Cuando el procesamiento termine vas a verlos acá, listos para reproducir y descargar."
+          />
+        ) : (
+          <ul className="detail__clips">
+            {clips.map((clip) => (
+              <li key={clip.id} className="detail__clip">
+                {clip.path ? (
+                  <video
+                    className="detail__video"
+                    src={api.clipFileUrl(clip.id)}
+                    controls
+                    preload="metadata"
+                  />
+                ) : (
+                  <div className="detail__video detail__video--failed">
+                    <span>{clip.error ?? "No se pudo generar"}</span>
+                  </div>
+                )}
+                {clip.path && (
+                  <a className="btn btn--sm" href={api.clipFileUrl(clip.id, true)} download>
+                    Descargar
+                  </a>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </Panel>
+
+      <Panel title="Momentos detectados">
+        {highlights.length === 0 ? (
+          <EmptyState title="Todavía no analizamos este video." />
+        ) : (
+          <ul className="detail__highlights">
+            {highlights.map((highlight) => (
+              <li key={highlight.id} className="detail__highlight">
+                <span className="detail__score mono">{highlight.score}</span>
+                <div className="detail__highlight-body">
+                  <p className="detail__highlight-title">{highlight.title}</p>
+                  {highlight.hook_sentence && (
+                    <p className="detail__hook">«{highlight.hook_sentence}»</p>
+                  )}
+                  {highlight.virality_reason && (
+                    <p className="detail__reason">{highlight.virality_reason}</p>
+                  )}
+                </div>
+                <span className="detail__times mono">
+                  {timecode(highlight.start_time)} → {timecode(highlight.end_time)}
+                  <span className="detail__duration">{duration(highlight.duration)}</span>
+                </span>
+                <span className={`chip chip--${highlight.selected ? "mark" : "standby"}`}>
+                  {highlight.selected ? "Elegido" : "Descartado"}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Panel>
+
+      <Panel title="Transcripción">
+        {!project.transcript || project.transcript.segments.length === 0 ? (
+          <EmptyState title="Todavía no transcribimos este video." />
+        ) : (
+          <ol className="detail__transcript">
+            {project.transcript.segments.map((segment, index) => (
+              <li key={index} className="detail__segment">
+                <span className="detail__timecode mono">{timecode(segment.start)}</span>
+                <p>{segment.text}</p>
+              </li>
+            ))}
+          </ol>
+        )}
+      </Panel>
+
+      <p className="muted small">
+        Creado el {shortDate(project.created_at)} · {project.settings.num_clips} clips ·{" "}
+        {project.settings.aspect_ratio} · {project.settings.resolution}p · modo{" "}
+        {project.settings.mode}
+      </p>
+    </div>
+  );
+}

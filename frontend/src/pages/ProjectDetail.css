@@ -1,0 +1,169 @@
+.detail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.detail__head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.detail__source {
+  font-size: var(--text-sm);
+  color: var(--ink-faint);
+  overflow-wrap: anywhere;
+}
+
+.detail__legend {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+  font-size: var(--text-xs);
+  color: var(--ink-faint);
+}
+
+.detail__legend-key {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+}
+
+.detail__legend-key--selected {
+  background: var(--mark);
+}
+
+.detail__legend-key--discarded {
+  background: var(--ink-ghost);
+  margin-left: var(--space-3);
+}
+
+.detail__legend-total {
+  margin-left: auto;
+}
+
+/* Los clips se muestran verticales porque son verticales. */
+.detail__clips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+}
+
+.detail__clip {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  align-items: stretch;
+  width: 168px;
+}
+
+.detail__video {
+  width: 168px;
+  aspect-ratio: 9 / 16;
+  background: var(--letterbox);
+  border: 1px solid var(--edge);
+  border-radius: var(--radius-md);
+}
+
+.detail__video--failed {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  text-align: center;
+  font-size: var(--text-xs);
+  color: var(--flag);
+  border-color: var(--flag-dim);
+}
+
+.detail__highlights {
+  display: flex;
+  flex-direction: column;
+}
+
+.detail__highlight {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) auto auto;
+  align-items: start;
+  gap: var(--space-4);
+  padding: var(--space-3) 0;
+}
+
+.detail__highlight + .detail__highlight {
+  border-top: 1px solid var(--edge-soft);
+}
+
+.detail__score {
+  padding-top: 2px;
+  font-size: var(--text-lg);
+  font-weight: 500;
+  color: var(--mark);
+}
+
+.detail__highlight-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.detail__highlight-title {
+  font-weight: 500;
+}
+
+.detail__hook {
+  color: var(--ink-soft);
+  font-size: var(--text-sm);
+}
+
+.detail__reason {
+  color: var(--ink-faint);
+  font-size: var(--text-sm);
+}
+
+.detail__times {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  font-size: var(--text-xs);
+  color: var(--ink-soft);
+}
+
+.detail__duration {
+  color: var(--ink-faint);
+}
+
+/* La transcripción es una partitura: timecode a la izquierda, texto al lado. */
+.detail__transcript {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  max-height: 420px;
+  overflow-y: auto;
+}
+
+.detail__segment {
+  display: grid;
+  grid-template-columns: 62px minmax(0, 1fr);
+  gap: var(--space-4);
+  font-size: var(--text-sm);
+}
+
+.detail__timecode {
+  color: var(--ink-faint);
+  font-size: var(--text-xs);
+  padding-top: 3px;
+}
+
+@media (max-width: 760px) {
+  .detail__highlight {
+    grid-template-columns: 34px minmax(0, 1fr);
+  }
+
+  .detail__times,
+  .detail__highlight .chip {
+    grid-column: 2;
+  }
+}

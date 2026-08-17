@@ -1,0 +1,58 @@
+.projects {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.projects__item + .projects__item {
+  border-top: 1px solid var(--edge-soft);
+}
+
+.projects__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+/* Las acciones aparecen al acercarse, pero nunca desaparecen del todo para
+   quien navega con teclado. */
+.projects__actions {
+  display: flex;
+  gap: var(--space-1);
+  opacity: 0;
+  transition: opacity var(--fast) var(--ease);
+}
+
+.projects__row:hover .projects__actions,
+.projects__actions:focus-within {
+  opacity: 1;
+}
+
+.projects__rename,
+.projects__confirm {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-2);
+}
+
+.projects__rename .input {
+  max-width: 320px;
+}
+
+.projects__confirm p {
+  flex: 1;
+  font-size: var(--text-sm);
+  color: var(--ink-soft);
+}
+
+@media (max-width: 760px) {
+  .projects__actions {
+    opacity: 1;
+  }
+
+  .projects__confirm {
+    flex-wrap: wrap;
+  }
+}

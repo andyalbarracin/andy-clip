@@ -1,0 +1,59 @@
+.timeline {
+  width: 100%;
+}
+
+.timeline__track {
+  position: relative;
+  width: 100%;
+  background: var(--letterbox);
+  border: 1px solid var(--edge-soft);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.timeline--sm .timeline__track {
+  height: 6px;
+}
+
+.timeline--md .timeline__track {
+  height: 12px;
+}
+
+.timeline--lg .timeline__track {
+  height: 26px;
+}
+
+.timeline__segment {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 2px;
+  transition: background var(--fast) var(--ease), transform var(--fast) var(--ease);
+}
+
+.timeline__segment.is-selected {
+  background: var(--mark);
+}
+
+.timeline__segment.is-discarded {
+  background: var(--ink-ghost);
+}
+
+button.timeline__segment {
+  cursor: pointer;
+}
+
+button.timeline__segment:hover {
+  background: var(--mark-bright);
+}
+
+button.timeline__segment.is-discarded:hover {
+  background: var(--ink-faint);
+}
+
+.timeline__segment.is-active {
+  background: var(--mark-bright);
+  box-shadow: inset 0 0 0 1px var(--ink);
+}

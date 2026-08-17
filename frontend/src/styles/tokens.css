@@ -1,0 +1,109 @@
+/*
+ * Andy Clip — sistema de diseño.
+ *
+ * El mundo del producto es una sala de montaje: paredes grafito para no
+ * contaminar la percepción de la imagen, el negro del letterbox alrededor del
+ * video, y el ámbar de una marca de corte sobre la línea de tiempo. Esa marca
+ * es el único acento: si algo es ámbar, es porque señala un momento elegido o
+ * la acción que sigue.
+ *
+ * Oscuro y sin alternador a propósito: un fondo claro te cambia cómo percibís
+ * el clip que estás juzgando.
+ */
+
+:root {
+  color-scheme: dark;
+
+  /* ── Superficies ───────────────────────────────────────────────────────
+     Mismo tono, solo cambia la claridad. Los saltos son de dos o tres puntos
+     porcentuales: no se ven de a uno, se sienten cuando se apilan.
+     La barra lateral usa el mismo fondo que el lienzo — un color distinto
+     partiría la pantalla en dos mundos. Alcanza con un borde. */
+  --room: #17181a;          /* lienzo y barra lateral */
+  --room-raised: #1c1e20;   /* paneles y tarjetas */
+  --room-overlay: #232629;  /* menús y modales: un escalón por encima */
+  --room-inset: #121315;    /* campos: reciben contenido, van más oscuros */
+  --letterbox: #0a0b0c;     /* el negro detrás de un video */
+
+  /* ── Tinta ─────────────────────────────────────────────────────────────
+     Cuatro niveles, no dos. Apenas cálida: es luz de pantalla en una sala
+     apagada, no papel. */
+  --ink: #e9e7e4;
+  --ink-soft: #a9a7a2;
+  --ink-faint: #77746f;
+  --ink-ghost: #504e4b;
+
+  /* ── Bordes ────────────────────────────────────────────────────────────
+     Se encuentran cuando los buscás y desaparecen cuando no. */
+  --edge-soft: rgba(255, 255, 255, 0.045);
+  --edge: rgba(255, 255, 255, 0.075);
+  --edge-strong: rgba(255, 255, 255, 0.145);
+
+  /* ── Marca de corte: el acento, uno solo ───────────────────────────────*/
+  --mark: #dd8f3c;
+  --mark-bright: #f0a24a;
+  --mark-dim: rgba(221, 143, 60, 0.16);
+  --mark-line: rgba(221, 143, 60, 0.4);
+
+  /* ── Semánticos, desaturados para que no griten sobre grafito ──────────*/
+  --waveform: #6f9d68;   /* disponible, finalizado */
+  --waveform-dim: rgba(111, 157, 104, 0.15);
+  --flag: #c96a5e;       /* error, fallido */
+  --flag-dim: rgba(201, 106, 94, 0.15);
+  --standby: #7c8590;    /* en cola, no configurado */
+  --standby-dim: rgba(124, 133, 144, 0.15);
+
+  /* ── Espaciado: base 4 ─────────────────────────────────────────────────*/
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+
+  /* ── Radios: ni filoso ni pastilla ─────────────────────────────────────*/
+  --radius-sm: 5px;   /* etiquetas, marcas */
+  --radius-md: 7px;   /* campos, botones */
+  --radius-lg: 11px;  /* paneles */
+  --radius-xl: 15px;  /* modales */
+
+  /* ── Tipografía ────────────────────────────────────────────────────────
+     Plex Sans y Plex Mono comparten esqueleto: esta interfaz mezcla texto y
+     timecodes en la misma línea todo el tiempo, y con familias ajenas ese
+     encuentro se nota. Servidas desde el paquete, no desde un CDN: la
+     aplicación tiene que abrir sin internet. */
+  --font-sans: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+  --text-xs: 11px;
+  --text-sm: 12.5px;
+  --text-base: 14px;
+  --text-md: 16px;
+  --text-lg: 20px;
+  --text-xl: 27px;
+
+  /* ── Profundidad: bordes. Sin sombras salvo lo que flota ───────────────
+     Una herramienta densa se lee mejor con bordes, y sobre grafito una sombra
+     casi no existe. Solo lo que se despega de la página proyecta. */
+  --lift: 0 10px 28px rgba(0, 0, 0, 0.5), 0 2px 6px rgba(0, 0, 0, 0.4);
+
+  /* ── Movimiento: rápido y sin rebote ───────────────────────────────────*/
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+  --fast: 120ms;
+  --medium: 200ms;
+
+  /* ── Medidas del armazón ───────────────────────────────────────────────*/
+  --rail: 216px;         /* barra lateral: cuatro destinos no piden 240 */
+  --measure: 1080px;     /* ancho máximo de lectura del contenido */
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

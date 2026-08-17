@@ -1,0 +1,102 @@
+.project-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto 92px;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-2);
+  border-radius: var(--radius-md);
+  transition: background var(--fast) var(--ease);
+}
+
+.project-row:hover {
+  background: var(--room-overlay);
+}
+
+.project-row__main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.project-row__name {
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.project-row__source {
+  font-size: var(--text-xs);
+  color: var(--ink-faint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.project-row__specs {
+  font-size: var(--text-xs);
+  color: var(--ink-faint);
+}
+
+.project-row__date {
+  font-size: var(--text-xs);
+  color: var(--ink-faint);
+  text-align: right;
+}
+
+/* El estado nunca es solo color: siempre trae su palabra. */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+.chip::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 99px;
+  background: currentColor;
+}
+
+.chip--standby {
+  color: var(--standby);
+  background: var(--standby-dim);
+  border-color: var(--standby-dim);
+}
+
+.chip--mark {
+  color: var(--mark);
+  background: var(--mark-dim);
+  border-color: var(--mark-line);
+}
+
+.chip--waveform {
+  color: var(--waveform);
+  background: var(--waveform-dim);
+  border-color: var(--waveform-dim);
+}
+
+.chip--flag {
+  color: var(--flag);
+  background: var(--flag-dim);
+  border-color: var(--flag-dim);
+}
+
+@media (max-width: 760px) {
+  .project-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    row-gap: var(--space-2);
+  }
+
+  .project-row__specs,
+  .project-row__date {
+    display: none;
+  }
+}

@@ -1,0 +1,228 @@
+/* ── Botón ────────────────────────────────────────────────────────────────*/
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  border: 1px solid var(--edge);
+  border-radius: var(--radius-md);
+  background: var(--room-raised);
+  color: var(--ink);
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background var(--fast) var(--ease), border-color var(--fast) var(--ease),
+    color var(--fast) var(--ease);
+}
+
+.btn--md {
+  padding: 9px var(--space-4);
+  font-size: var(--text-base);
+}
+
+.btn--sm {
+  padding: 5px var(--space-3);
+  font-size: var(--text-sm);
+}
+
+.btn:hover:not(:disabled) {
+  border-color: var(--edge-strong);
+  background: var(--room-overlay);
+}
+
+.btn:disabled {
+  color: var(--ink-ghost);
+  cursor: not-allowed;
+  background: var(--room-raised);
+  border-color: var(--edge-soft);
+}
+
+/* La acción que sigue lleva la marca de corte. Una sola por pantalla. */
+.btn--primary {
+  background: var(--mark);
+  border-color: var(--mark);
+  color: #1a1206;
+  font-weight: 600;
+}
+
+.btn--primary:hover:not(:disabled) {
+  background: var(--mark-bright);
+  border-color: var(--mark-bright);
+}
+
+.btn--primary:disabled {
+  background: var(--mark-dim);
+  border-color: transparent;
+  color: var(--ink-faint);
+}
+
+.btn--ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--ink-soft);
+}
+
+.btn--ghost:hover:not(:disabled) {
+  background: var(--room-raised);
+  border-color: var(--edge-soft);
+  color: var(--ink);
+}
+
+.btn--danger {
+  color: var(--flag);
+}
+
+.btn--danger:hover:not(:disabled) {
+  background: var(--flag-dim);
+  border-color: var(--flag);
+}
+
+/* ── Estados ──────────────────────────────────────────────────────────────*/
+
+.dot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 9px;
+  height: 9px;
+  flex: none;
+  border-radius: 99px;
+  font-size: 9px;
+  line-height: 1;
+  color: var(--room);
+}
+
+.dot--available,
+.dot--configured {
+  background: var(--waveform);
+}
+
+/* No detectado y error no son círculos llenos: la forma también informa. */
+.dot--not_detected,
+.dot--error {
+  background: var(--flag);
+  border-radius: 2px;
+}
+
+.dot--not_configured {
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px var(--standby);
+}
+
+/* ── Panel ────────────────────────────────────────────────────────────────*/
+
+.panel {
+  background: var(--room-raised);
+  border: 1px solid var(--edge);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+}
+
+.panel__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+
+/* ── Vacíos ───────────────────────────────────────────────────────────────*/
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-6) 0;
+}
+
+.empty__title {
+  color: var(--ink-soft);
+}
+
+.empty__hint {
+  color: var(--ink-faint);
+  font-size: var(--text-sm);
+  max-width: 48ch;
+}
+
+/* ── Campos ───────────────────────────────────────────────────────────────*/
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.field__label {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--ink-soft);
+}
+
+.field__hint {
+  font-size: var(--text-sm);
+  color: var(--ink-faint);
+}
+
+/* Los campos van más oscuros que su entorno: reciben contenido. */
+.input,
+.select {
+  width: 100%;
+  padding: 9px var(--space-3);
+  background: var(--room-inset);
+  border: 1px solid var(--edge);
+  border-radius: var(--radius-md);
+  color: var(--ink);
+  transition: border-color var(--fast) var(--ease);
+}
+
+.input::placeholder {
+  color: var(--ink-ghost);
+}
+
+.input:hover,
+.select:hover {
+  border-color: var(--edge-strong);
+}
+
+.input:focus,
+.select:focus {
+  outline: none;
+  border-color: var(--mark);
+  box-shadow: 0 0 0 3px var(--mark-dim);
+}
+
+.select {
+  appearance: none;
+  cursor: pointer;
+  background-image: linear-gradient(45deg, transparent 50%, var(--ink-faint) 50%),
+    linear-gradient(135deg, var(--ink-faint) 50%, transparent 50%);
+  background-position: right 15px center, right 10px center;
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+  padding-right: var(--space-6);
+}
+
+/* ── Errores ──────────────────────────────────────────────────────────────*/
+
+.error-note {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--flag-dim);
+  border: 1px solid var(--flag);
+  border-radius: var(--radius-md);
+  color: var(--ink);
+  font-size: var(--text-sm);
+}
+
+.error-note__link {
+  color: var(--mark);
+  font-weight: 500;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}

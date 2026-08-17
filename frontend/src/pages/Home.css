@@ -1,0 +1,96 @@
+.home {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.onboarding {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  background: var(--mark-dim);
+  border: 1px solid var(--mark-line);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+}
+
+.start {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.start__row {
+  display: flex;
+  gap: var(--space-3);
+}
+
+.start__input {
+  flex: 1;
+  padding: 13px var(--space-4);
+  font-size: var(--text-md);
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+}
+
+.stack > li + li {
+  border-top: 1px solid var(--edge-soft);
+}
+
+.link-quiet {
+  color: var(--ink-faint);
+  font-size: var(--text-sm);
+}
+
+.link-quiet:hover {
+  color: var(--ink);
+}
+
+.muted {
+  color: var(--ink-faint);
+}
+
+.small {
+  font-size: var(--text-sm);
+}
+
+/* Los clips son verticales: la tira los muestra como son, no en tarjetas
+   cuadradas que les recortan el formato. */
+.clip-strip {
+  display: flex;
+  gap: var(--space-4);
+  overflow-x: auto;
+  padding-bottom: var(--space-2);
+}
+
+.clip-strip__item {
+  flex: none;
+  width: 128px;
+}
+
+.clip-strip__video {
+  width: 128px;
+  aspect-ratio: 9 / 16;
+  background: var(--letterbox);
+  border: 1px solid var(--edge);
+  border-radius: var(--radius-md);
+  object-fit: cover;
+}
+
+.clip-strip__name {
+  margin-top: var(--space-2);
+  font-size: var(--text-sm);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.clip-strip__meta {
+  font-size: var(--text-xs);
+  color: var(--ink-faint);
+}
