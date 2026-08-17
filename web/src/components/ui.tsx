@@ -1,65 +1,205 @@
-import type { ButtonHTMLAttributes, ReactNode } from "react";
+/**
+ * Los componentes de la aplicación, construidos sobre Atlassian Design System.
+ *
+ * Esta capa existe para que las pantallas no hablen con `@atlaskit` directo:
+ * traduce el vocabulario del producto ("primario", "peligro", "compacto") al de
+ * la librería, y deja un único lugar donde ajustar si algo cambia.
+ */
+import AkButton, { LoadingButton } from "@atlaskit/button";
+import { Label } from "@atlaskit/form";
+import Heading from "@atlaskit/heading";
+import Lozenge from "@atlaskit/lozenge";
+import AkSelect from "@atlaskit/select";
+import SectionMessage, { SectionMessageAction } from "@atlaskit/section-message";
+import AkTextfield from "@atlaskit/textfield";
+import type { AnchorHTMLAttributes, MouseEvent, ReactNode } from "react";
+import { forwardRef } from "react";
 import { Link } from "react-router-dom";
-import "./ui.css";
 
 import type { ComponentStatus } from "../types/api";
+import "./ui.css";
 
 /* ── Botón ────────────────────────────────────────────────────────────────*/
 
-type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
-  variant?: "primary" | "secondary" | "ghost" | "danger";
+type Variant = "primary" | "secondary" | "ghost" | "danger";
+
+const APPEARANCE = {
+  primary: "primary",
+  secondary: "default",
+  ghost: "subtle",
+  danger: "danger",
+} as const;
+
+interface ButtonProps {
+  variant?: Variant;
   size?: "sm" | "md";
   loading?: boolean;
-};
+  disabled?: boolean;
+  type?: "button" | "submit" | "reset";
+  onClick?: (event: MouseEvent<HTMLElement>) => void;
+  children: ReactNode;
+}
 
 export function Button({
   variant = "secondary",
   size = "md",
   loading = false,
   children,
-  className = "",
   disabled,
-  ...rest
+  onClick,
+  type = "button",
 }: ButtonProps) {
-  return (
-    <button
-      className={`btn btn--${variant} btn--${size} ${className}`}
-      disabled={disabled || loading}
-      aria-busy={loading || undefined}
-      {...rest}
-    >
+  const shared = {
+    appearance: APPEARANCE[variant],
+    spacing: size === "sm" ? ("compact" as const) : ("default" as const),
+    isDisabled: disabled,
+    onClick,
+    type,
+  };
+
+  return loading ? (
+    <LoadingButton {...shared} isLoading>
       {children}
-    </button>
+    </LoadingButton>
+  ) : (
+    <AkButton {...shared}>{children}</AkButton>
   );
 }
-
-/* ── Estado de un componente del sistema ──────────────────────────────────*/
-
-const STATUS_LABEL: Record<ComponentStatus, string> = {
-  available: "Disponible",
-  configured: "Configurado",
-  not_configured: "No configurado",
-  not_detected: "No detectado",
-  error: "Error",
-};
 
 /**
- * El estado nunca depende solo del color: el punto cambia de forma y siempre
- * viene con su palabra al lado.
+ * Adaptador para que un botón de Atlassian navegue con el router en vez de
+ * recargar la página entera.
  */
-export function StatusDot({ status }: { status: ComponentStatus }) {
+const RouterAnchor = forwardRef<HTMLAnchorElement, AnchorHTMLAttributes<HTMLAnchorElement>>(
+  ({ href = "", ...rest }, ref) => <Link ref={ref} to={href} {...rest} />,
+);
+RouterAnchor.displayName = "RouterAnchor";
+
+/** Un botón que navega. Mismo aspecto, pero es un enlace de verdad. */
+export function ButtonLink({
+  to,
+  variant = "secondary",
+  size = "md",
+  children,
+}: {
+  to: string;
+  variant?: Variant;
+  size?: "sm" | "md";
+  children: ReactNode;
+}) {
   return (
-    <span className={`dot dot--${status}`} aria-hidden="true">
-      {status === "not_detected" || status === "error" ? "×" : ""}
-    </span>
+    <AkButton
+      appearance={APPEARANCE[variant]}
+      spacing={size === "sm" ? "compact" : "default"}
+      component={RouterAnchor}
+      href={to}
+    >
+      {children}
+    </AkButton>
   );
 }
 
-export function StatusLabel({ status }: { status: ComponentStatus }) {
-  return <>{STATUS_LABEL[status] ?? status}</>;
+/** Descarga de un archivo: tiene que ser un ancla, no un botón. */
+export function DownloadLink({ href, children }: { href: string; children: ReactNode }) {
+  return (
+    <AkButton href={href} download spacing="compact">
+      {children}
+    </AkButton>
+  );
 }
 
-/* ── Panel ────────────────────────────────────────────────────────────────*/
+/* ── Campos ───────────────────────────────────────────────────────────────*/
+
+export function Field({
+  label,
+  hint,
+  htmlFor,
+  children,
+}: {
+  label: string;
+  hint?: ReactNode;
+  htmlFor: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="field">
+      <Label htmlFor={htmlFor}>{label}</Label>
+      {children}
+      {hint && <p className="field__hint">{hint}</p>}
+    </div>
+  );
+}
+
+export function TextInput({
+  id,
+  value,
+  onChange,
+  placeholder,
+  type = "text",
+  isMonospaced = false,
+  ...rest
+}: {
+  id: string;
+  /** Controlado. Para un campo que guarda al salir, usá `defaultValue` + `onBlur`. */
+  value?: string | number;
+  onChange?: (value: string) => void;
+  placeholder?: string;
+  type?: string;
+  isMonospaced?: boolean;
+  [key: string]: unknown;
+}) {
+  return (
+    <AkTextfield
+      id={id}
+      name={id}
+      value={value}
+      type={type}
+      placeholder={placeholder}
+      isMonospaced={isMonospaced}
+      onChange={
+        onChange
+          ? (event) => onChange((event.target as HTMLInputElement).value)
+          : undefined
+      }
+      autoComplete="off"
+      spellCheck={false}
+      {...rest}
+    />
+  );
+}
+
+export interface Option {
+  value: string;
+  label: string;
+  isDisabled?: boolean;
+}
+
+export function Choice({
+  id,
+  value,
+  options,
+  onChange,
+}: {
+  id: string;
+  value: string;
+  options: Option[];
+  onChange: (value: string) => void;
+}) {
+  const selected = options.find((option) => option.value === value) ?? null;
+
+  return (
+    <AkSelect<Option>
+      inputId={id}
+      value={selected}
+      options={options}
+      isSearchable={false}
+      onChange={(option) => option && onChange(option.value)}
+      isOptionDisabled={(option) => Boolean(option.isDisabled)}
+    />
+  );
+}
+
+/* ── Estructura ───────────────────────────────────────────────────────────*/
 
 export function Panel({
   title,
@@ -76,7 +216,7 @@ export function Panel({
     <section className={`panel ${className}`}>
       {(title || action) && (
         <header className="panel__head">
-          {typeof title === "string" ? <h2>{title}</h2> : title}
+          {typeof title === "string" ? <Heading size="small">{title}</Heading> : title}
           {action}
         </header>
       )}
@@ -84,8 +224,6 @@ export function Panel({
     </section>
   );
 }
-
-/* ── Vacíos ───────────────────────────────────────────────────────────────*/
 
 export function EmptyState({
   title,
@@ -101,56 +239,70 @@ export function EmptyState({
       <p className="empty__title">{title}</p>
       {hint && <p className="empty__hint">{hint}</p>}
       {cta && (
-        <Link className="btn btn--primary btn--md" to={cta.to}>
+        <ButtonLink to={cta.to} variant="primary">
           {cta.label}
-        </Link>
+        </ButtonLink>
       )}
     </div>
   );
 }
 
-/* ── Campo de formulario ──────────────────────────────────────────────────*/
+/* ── Estados ──────────────────────────────────────────────────────────────*/
 
-export function Field({
-  label,
-  hint,
-  htmlFor,
-  children,
-}: {
-  label: string;
-  hint?: ReactNode;
-  htmlFor: string;
-  children: ReactNode;
-}) {
+const STATUS_LABEL: Record<ComponentStatus, string> = {
+  available: "Disponible",
+  configured: "Configurado",
+  not_configured: "No configurado",
+  not_detected: "No detectado",
+  error: "Error",
+};
+
+const STATUS_APPEARANCE = {
+  available: "success",
+  configured: "success",
+  not_configured: "default",
+  not_detected: "removed",
+  error: "removed",
+} as const;
+
+/** Compacto, para el margen. El estado nunca depende solo del color. */
+export function StatusDot({ status }: { status: ComponentStatus }) {
   return (
-    <div className="field">
-      <label className="field__label" htmlFor={htmlFor}>
-        {label}
-      </label>
-      {children}
-      {hint && <p className="field__hint">{hint}</p>}
-    </div>
+    <span className={`dot dot--${status}`} aria-hidden="true">
+      {status === "not_detected" || status === "error" ? "×" : ""}
+    </span>
   );
 }
 
-/* ── Error que no deja a nadie en un callejón ─────────────────────────────*/
+export function StatusLabel({ status }: { status: ComponentStatus }) {
+  return <>{STATUS_LABEL[status] ?? status}</>;
+}
 
-export function ErrorNote({
-  message,
-  action,
-}: {
-  message: string;
-  action?: string;
-}) {
+export function StatusTag({ status }: { status: ComponentStatus }) {
+  return <Lozenge appearance={STATUS_APPEARANCE[status]}>{STATUS_LABEL[status]}</Lozenge>;
+}
+
+/* ── Errores ──────────────────────────────────────────────────────────────*/
+
+export function ErrorNote({ message, action }: { message: string; action?: string }) {
   const target = action?.startsWith("settings") ? "/configuracion" : null;
+
   return (
-    <p className="error-note" role="alert">
-      {message}
-      {target && (
-        <Link className="error-note__link" to={target}>
-          Ir a configuración
-        </Link>
-      )}
-    </p>
+    <div className="error-note" role="alert">
+      <SectionMessage
+        appearance="error"
+        actions={
+          target
+            ? [
+                <SectionMessageAction key="settings" href={target}>
+                  Ir a configuración
+                </SectionMessageAction>,
+              ]
+            : undefined
+        }
+      >
+        {message}
+      </SectionMessage>
+    </div>
   );
 }

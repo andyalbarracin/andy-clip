@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 
 import { api } from "../lib/api";
-import { Panel, StatusDot, StatusLabel } from "../components/ui";
+import { Panel, StatusDot, StatusTag } from "../components/ui";
 import "./Diagnostics.css";
 
 export function Diagnostics() {
@@ -27,7 +27,7 @@ export function Diagnostics() {
               <StatusDot status={component.status} />
               <span className="diagnostics__label">{component.label}</span>
               <span className="diagnostics__state">
-                <StatusLabel status={component.status} />
+                <StatusTag status={component.status} />
               </span>
               <span className="diagnostics__version mono">{component.version ?? ""}</span>
               {component.detail && component.status !== "available" && (

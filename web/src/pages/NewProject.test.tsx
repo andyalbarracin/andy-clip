@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { NewProject } from "./NewProject";
-import { mockApi, renderApp } from "../test/render";
+import { mockApi, openOptions, pickOption, renderApp } from "../test/render";
 
 const SETTINGS = {
   settings: {
@@ -39,13 +39,20 @@ describe("Procesar video", () => {
 
     renderApp(<NewProject />);
 
-    // Esperamos a que lleguen las opciones del backend, no al valor por
-    // defecto — coinciden, y el test pasaría sin haber cargado nada.
-    await screen.findByRole("option", { name: "4:5" });
-
+    expect(await screen.findByText("720p")).toBeInTheDocument();
     expect(screen.getByLabelText("Cantidad de clips")).toHaveValue(3);
-    expect(screen.getByLabelText("Relación de aspecto")).toHaveValue("9:16");
-    expect(screen.getByLabelText("Resolución")).toHaveValue("720");
+    expect(screen.getByText("9:16")).toBeInTheDocument();
+
+    // Las opciones tienen que venir del backend, no del valor por defecto:
+    // coinciden, y el test pasaría sin haber cargado nada.
+    openOptions("Relación de aspecto");
+    await waitFor(() => {
+      expect(screen.getAllByRole("option").map((option) => option.textContent)).toEqual([
+        "9:16",
+        "1:1",
+        "4:5",
+      ]);
+    });
   });
 
   it("toma la fuente que viene del Inicio", async () => {
@@ -64,9 +71,8 @@ describe("Procesar video", () => {
     });
 
     renderApp(<NewProject />, "/procesar?source=https%3A%2F%2Fyoutu.be%2Fabc");
-    await screen.findByRole("option", { name: "4:5" });
 
-    await userEvent.selectOptions(screen.getByLabelText("Relación de aspecto"), "4:5");
+    await pickOption("Relación de aspecto", "4:5");
     await userEvent.click(screen.getByRole("button", { name: "Crear proyecto" }));
 
     await waitFor(() => {
@@ -89,7 +95,6 @@ describe("Procesar video", () => {
     });
 
     renderApp(<NewProject />, "/procesar?source=%2Ftmp%2Fno-existe.mp4");
-    await screen.findByRole("option", { name: "4:5" });
 
     await userEvent.click(screen.getByRole("button", { name: "Crear proyecto" }));
 
@@ -102,8 +107,9 @@ describe("Procesar video", () => {
     mockApi({ "/api/settings/ai": AI, "/api/settings": SETTINGS });
 
     renderApp(<NewProject />);
-    await waitFor(() => expect(screen.getByLabelText("Modo")).toBeInTheDocument());
+    openOptions("Modo");
 
-    expect(screen.getByRole("option", { name: /MuAPI/ })).toBeDisabled();
+    const muapi = await screen.findByText("MuAPI (sin configurar)");
+    expect(muapi.closest('[role="option"]')).toHaveAttribute("aria-disabled", "true");
   });
 });

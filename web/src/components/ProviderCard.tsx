@@ -4,7 +4,7 @@ import { useState } from "react";
 
 import { api, ApiError } from "../lib/api";
 import type { AiProvider } from "../types/api";
-import { Button, Field, StatusDot, StatusLabel } from "./ui";
+import { Button, Choice, Field, StatusTag, TextInput } from "./ui";
 import "./ProviderCard.css";
 
 const CUSTOM = "__custom__";
@@ -110,11 +110,8 @@ export function ProviderCard({ provider, isDefault, onMakeDefault }: Props) {
     <article className="provider">
       <header className="provider__head">
         <div className="provider__title">
-          <StatusDot status={provider.configured ? "configured" : "not_configured"} />
           <h3>{provider.label}</h3>
-          <span className="provider__state">
-            <StatusLabel status={provider.configured ? "configured" : "not_configured"} />
-          </span>
+          <StatusTag status={provider.configured ? "configured" : "not_configured"} />
           {provider.key_source === "env" && (
             <span className="source-tag">viene de {provider.env_var}</span>
           )}
@@ -142,15 +139,13 @@ export function ProviderCard({ provider, isDefault, onMakeDefault }: Props) {
         >
           <div className="provider__key">
             <span className="provider__key-field">
-              <input
+              <TextInput
                 id={`key-${provider.id}`}
-                className="input mono"
                 type={visible ? "text" : "password"}
                 value={draftKey}
-                onChange={(event) => setDraftKey(event.target.value)}
+                onChange={setDraftKey}
                 placeholder={provider.configured ? provider.masked_key ?? "" : "Pegá tu API key"}
-                autoComplete="off"
-                spellCheck={false}
+                isMonospaced
               />
               <button
                 type="button"
@@ -179,27 +174,23 @@ export function ProviderCard({ provider, isDefault, onMakeDefault }: Props) {
             hint="Podés elegir uno de la lista o escribir el nombre exacto de otro."
           >
             <div className="provider__model">
-              <select
+              <Choice
                 id={`model-${provider.id}`}
-                className="select"
                 value={usingCustom ? CUSTOM : provider.model ?? ""}
-                onChange={(event) => {
-                  if (event.target.value === CUSTOM) {
+                onChange={(value) => {
+                  if (value === CUSTOM) {
                     setUsingCustom(true);
                     setCustomModel(provider.model ?? "");
                     return;
                   }
                   setUsingCustom(false);
-                  saveModel.mutate(event.target.value);
+                  saveModel.mutate(value);
                 }}
-              >
-                {modelList.map((model) => (
-                  <option key={model} value={model}>
-                    {model}
-                  </option>
-                ))}
-                <option value={CUSTOM}>Otro modelo…</option>
-              </select>
+                options={[
+                  ...modelList.map((model) => ({ value: model, label: model })),
+                  { value: CUSTOM, label: "Otro modelo…" },
+                ]}
+              />
 
               <Button
                 onClick={() => refreshModels.mutate()}
@@ -224,12 +215,12 @@ export function ProviderCard({ provider, isDefault, onMakeDefault }: Props) {
             <label className="sr-only" htmlFor={`custom-${provider.id}`}>
               Nombre del modelo
             </label>
-            <input
+            <TextInput
               id={`custom-${provider.id}`}
-              className="input mono"
               value={customModel}
-              onChange={(event) => setCustomModel(event.target.value)}
+              onChange={setCustomModel}
               placeholder="por ejemplo, gpt-4.1-mini"
+              isMonospaced
               autoFocus
             />
             <Button variant="primary" type="submit" disabled={!customModel.trim()}>

@@ -1,9 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { Link } from "react-router-dom";
 
 import { api, ApiError } from "../lib/api";
-import { ErrorNote, Field, Panel } from "../components/ui";
+import { ButtonLink, Choice, ErrorNote, Field, Panel, TextInput } from "../components/ui";
 import { ProviderCard } from "../components/ProviderCard";
 import "./Settings.css";
 
@@ -81,18 +80,12 @@ export function Settings() {
             htmlFor="cfg-aspect"
             hint={<Source source={sources["video.aspect_ratio"]} />}
           >
-            <select
+            <Choice
               id="cfg-aspect"
-              className="select"
               value={settings.video.aspect_ratio}
-              onChange={(event) => save({ video: { aspect_ratio: event.target.value } })}
-            >
-              {options.aspect_ratios.map((ratio) => (
-                <option key={ratio} value={ratio}>
-                  {ratio}
-                </option>
-              ))}
-            </select>
+              onChange={(value) => save({ video: { aspect_ratio: value } })}
+              options={options.aspect_ratios.map((ratio) => ({ value: ratio, label: ratio }))}
+            />
           </Field>
 
           <Field
@@ -100,14 +93,15 @@ export function Settings() {
             htmlFor="cfg-clips"
             hint={<Source source={sources["video.num_clips"]} />}
           >
-            <input
+            <TextInput
               id="cfg-clips"
-              className="input"
               type="number"
               min={1}
               max={options.max_clips}
               defaultValue={settings.video.num_clips}
-              onBlur={(event) => save({ video: { num_clips: Number(event.target.value) } })}
+              onBlur={(event: React.FocusEvent<HTMLInputElement>) =>
+                save({ video: { num_clips: Number(event.target.value) } })
+              }
             />
           </Field>
 
@@ -116,18 +110,12 @@ export function Settings() {
             htmlFor="cfg-resolution"
             hint={<Source source={sources["video.resolution"]} />}
           >
-            <select
+            <Choice
               id="cfg-resolution"
-              className="select"
               value={settings.video.resolution}
-              onChange={(event) => save({ video: { resolution: event.target.value } })}
-            >
-              {options.resolutions.map((value) => (
-                <option key={value} value={value}>
-                  {value}p
-                </option>
-              ))}
-            </select>
+              onChange={(value) => save({ video: { resolution: value } })}
+              options={options.resolutions.map((value) => ({ value, label: `${value}p` }))}
+            />
           </Field>
 
           <Field
@@ -135,11 +123,12 @@ export function Settings() {
             htmlFor="cfg-output"
             hint="Relativa a la carpeta del proyecto."
           >
-            <input
+            <TextInput
               id="cfg-output"
-              className="input"
               defaultValue={settings.video.output_dir}
-              onBlur={(event) => save({ video: { output_dir: event.target.value } })}
+              onBlur={(event: React.FocusEvent<HTMLInputElement>) =>
+                save({ video: { output_dir: event.target.value } })
+              }
             />
           </Field>
         </div>
@@ -152,20 +141,12 @@ export function Settings() {
             htmlFor="cfg-whisper"
             hint="Los modelos más grandes transcriben mejor y tardan más. Si todavía no lo usaste, se descarga la primera vez."
           >
-            <select
+            <Choice
               id="cfg-whisper"
-              className="select"
               value={settings.transcription.whisper_model}
-              onChange={(event) =>
-                save({ transcription: { whisper_model: event.target.value } })
-              }
-            >
-              {options.whisper_models.map((model) => (
-                <option key={model} value={model}>
-                  {model}
-                </option>
-              ))}
-            </select>
+              onChange={(value) => save({ transcription: { whisper_model: value } })}
+              options={options.whisper_models.map((model) => ({ value: model, label: model }))}
+            />
           </Field>
 
           <Field
@@ -173,18 +154,15 @@ export function Settings() {
             htmlFor="cfg-device"
             hint="Si elegís CUDA y no está disponible, seguimos en CPU."
           >
-            <select
+            <Choice
               id="cfg-device"
-              className="select"
               value={settings.transcription.device}
-              onChange={(event) => save({ transcription: { device: event.target.value } })}
-            >
-              {options.whisper_devices.map((device) => (
-                <option key={device} value={device}>
-                  {device === "auto" ? "Automático" : device.toUpperCase()}
-                </option>
-              ))}
-            </select>
+              onChange={(value) => save({ transcription: { device: value } })}
+              options={options.whisper_devices.map((device) => ({
+                value: device,
+                label: device === "auto" ? "Automático" : device.toUpperCase(),
+              }))}
+            />
           </Field>
 
           <Field
@@ -192,17 +170,15 @@ export function Settings() {
             htmlFor="cfg-vad"
             hint="Saltea los silencios. Puede cortar de más en videos con música."
           >
-            <select
+            <Choice
               id="cfg-vad"
-              className="select"
               value={settings.transcription.vad_filter ? "si" : "no"}
-              onChange={(event) =>
-                save({ transcription: { vad_filter: event.target.value === "si" } })
-              }
-            >
-              <option value="no">Desactivada</option>
-              <option value="si">Activada</option>
-            </select>
+              onChange={(value) => save({ transcription: { vad_filter: value === "si" } })}
+              options={[
+                { value: "no", label: "Desactivada" },
+                { value: "si", label: "Activada" },
+              ]}
+            />
           </Field>
         </div>
       </Panel>
@@ -212,9 +188,9 @@ export function Settings() {
           Revisá qué hay instalado en este equipo y qué le falta a Andy Clip para
           procesar un video.
         </p>
-        <Link className="btn btn--sm" to="/configuracion/diagnostico">
+        <ButtonLink to="/configuracion/diagnostico" size="sm">
           Ver diagnóstico
-        </Link>
+        </ButtonLink>
       </Panel>
     </div>
   );

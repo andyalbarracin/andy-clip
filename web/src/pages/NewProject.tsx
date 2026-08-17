@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { api, ApiError } from "../lib/api";
-import { Button, ErrorNote, Field, Panel } from "../components/ui";
+import { Button, Choice, ErrorNote, Field, Panel, TextInput } from "../components/ui";
 import "./NewProject.css";
 
 const LANGUAGES = [
@@ -79,15 +79,12 @@ export function NewProject() {
               htmlFor="source"
               hint="Un link de YouTube, otra URL compatible, o la ruta completa de un video de tu equipo."
             >
-              <input
+              <TextInput
                 id="source"
-                className="input"
                 value={source}
-                onChange={(event) => setSource(event.target.value)}
+                onChange={setSource}
                 placeholder="https://www.youtube.com/watch?v=…"
-                autoComplete="off"
-                spellCheck={false}
-                required
+                isRequired
               />
             </Field>
 
@@ -96,11 +93,10 @@ export function NewProject() {
               htmlFor="name"
               hint="Si lo dejás vacío le ponemos la fecha. Después lo podés cambiar."
             >
-              <input
+              <TextInput
                 id="name"
-                className="input"
                 value={name}
-                onChange={(event) => setName(event.target.value)}
+                onChange={setName}
                 placeholder="Opcional"
                 maxLength={120}
               />
@@ -111,60 +107,47 @@ export function NewProject() {
         <Panel title="Opciones">
           <div className="new-project__grid new-project__grid--four">
             <Field label="Cantidad de clips" htmlFor="num-clips">
-              <input
+              <TextInput
                 id="num-clips"
-                className="input"
                 type="number"
                 min={1}
                 max={options?.max_clips ?? 10}
                 value={numClips ?? defaults?.video.num_clips ?? 3}
-                onChange={(event) => setNumClips(Number(event.target.value))}
+                onChange={(value) => setNumClips(Number(value))}
               />
             </Field>
 
             <Field label="Relación de aspecto" htmlFor="aspect">
-              <select
+              <Choice
                 id="aspect"
-                className="select"
                 value={aspectRatio ?? defaults?.video.aspect_ratio ?? "9:16"}
-                onChange={(event) => setAspectRatio(event.target.value)}
-              >
-                {(options?.aspect_ratios ?? ["9:16"]).map((ratio) => (
-                  <option key={ratio} value={ratio}>
-                    {ratio}
-                  </option>
-                ))}
-              </select>
+                onChange={setAspectRatio}
+                options={(options?.aspect_ratios ?? ["9:16"]).map((ratio) => ({
+                  value: ratio,
+                  label: ratio,
+                }))}
+              />
             </Field>
 
             <Field label="Resolución" htmlFor="resolution">
-              <select
+              <Choice
                 id="resolution"
-                className="select"
                 value={resolution ?? defaults?.video.resolution ?? "720"}
-                onChange={(event) => setResolution(event.target.value)}
-              >
-                {(options?.resolutions ?? ["720"]).map((value) => (
-                  <option key={value} value={value}>
-                    {value}p
-                  </option>
-                ))}
-              </select>
+                onChange={setResolution}
+                options={(options?.resolutions ?? ["720"]).map((value) => ({
+                  value,
+                  label: `${value}p`,
+                }))}
+              />
             </Field>
 
             <Field label="Idioma del video" htmlFor="language">
-              <select
+              <Choice
                 id="language"
-                className="select"
                 value={language ?? defaults?.transcription.language ?? ""}
-                onChange={(event) => setLanguage(event.target.value)}
-              >
-                {LANGUAGES.map((item) => (
-                  <option key={item.value} value={item.value}>
-                    {item.label}
-                  </option>
-                ))}
-              </select>
+                onChange={setLanguage}
+                options={LANGUAGES}
+              />
             </Field>
           </div>
 
@@ -178,17 +161,19 @@ export function NewProject() {
                   : "MuAPI queda disponible si cargás su API key en Configuración."
               }
             >
-              <select
+              <Choice
                 id="mode"
-                className="select"
                 value={mode ?? defaults?.mode ?? "local"}
-                onChange={(event) => setMode(event.target.value)}
-              >
-                <option value="local">Local</option>
-                <option value="muapi" disabled={!muapiReady}>
-                  MuAPI {muapiReady ? "" : "(sin configurar)"}
-                </option>
-              </select>
+                onChange={setMode}
+                options={[
+                  { value: "local", label: "Local" },
+                  {
+                    value: "muapi",
+                    label: muapiReady ? "MuAPI" : "MuAPI (sin configurar)",
+                    isDisabled: !muapiReady,
+                  },
+                ]}
+              />
             </Field>
           </div>
         </Panel>

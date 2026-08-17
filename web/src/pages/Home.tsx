@@ -5,7 +5,7 @@ import { Link, useNavigate } from "react-router-dom";
 
 import { api } from "../lib/api";
 import { shortDate, shortSource } from "../lib/format";
-import { Button, EmptyState, Panel } from "../components/ui";
+import { Button, ButtonLink, EmptyState, Panel, TextInput } from "../components/ui";
 import { ProjectRow } from "../components/ProjectRow";
 import "./Home.css";
 
@@ -35,9 +35,9 @@ export function Home() {
             Configurá un proveedor de IA para analizar los mejores momentos de tus
             videos.
           </p>
-          <Link className="btn btn--primary btn--sm" to="/configuracion">
+          <ButtonLink to="/configuracion" variant="primary" size="sm">
             Configurar IA
-          </Link>
+          </ButtonLink>
         </div>
       )}
 
@@ -45,15 +45,14 @@ export function Home() {
       <form className="start" onSubmit={submit}>
         <h1>Nuevo proyecto</h1>
         <div className="start__row">
-          <input
-            className="input start__input"
-            type="text"
+          <label className="sr-only" htmlFor="source-inicio">
+            Origen del video
+          </label>
+          <TextInput
+            id="source-inicio"
             value={source}
-            onChange={(event) => setSource(event.target.value)}
+            onChange={setSource}
             placeholder="Pegá el link de YouTube o la ruta de un video de tu equipo"
-            aria-label="Origen del video"
-            autoComplete="off"
-            spellCheck={false}
           />
           <Button variant="primary" type="submit" disabled={!source.trim()}>
             Continuar

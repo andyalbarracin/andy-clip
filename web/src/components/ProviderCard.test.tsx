@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ProviderCard } from "./ProviderCard";
-import { mockApi, renderApp } from "../test/render";
+import { mockApi, openOptions, pickOption, renderApp } from "../test/render";
 import type { AiProvider } from "../types/api";
 
 const OPENAI: AiProvider = {
@@ -128,14 +128,16 @@ describe("Configuración de un proveedor de IA", () => {
     await userEvent.click(screen.getByRole("button", { name: "Actualizar modelos" }));
 
     expect(await screen.findByText(/Encontramos 3 modelos/)).toBeInTheDocument();
-    expect(screen.getByRole("option", { name: "o3-mini" })).toBeInTheDocument();
+
+    openOptions("Modelo");
+    expect(await screen.findByText("o3-mini")).toBeInTheDocument();
   });
 
   it("permite escribir un modelo que no está en la lista", async () => {
     const { calls } = mockApi({ "/api/settings": { settings: {}, sources: {}, options: {} } });
     renderCard(CONFIGURED);
 
-    await userEvent.selectOptions(screen.getByLabelText("Modelo"), "__custom__");
+    await pickOption("Modelo", "Otro modelo…");
     await userEvent.clear(screen.getByLabelText("Nombre del modelo"));
     await userEvent.type(screen.getByLabelText("Nombre del modelo"), "gpt-5-nano");
     await userEvent.click(screen.getByRole("button", { name: "Usar este modelo" }));

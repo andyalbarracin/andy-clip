@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
 import { api, ApiError } from "../lib/api";
-import { Button, EmptyState, ErrorNote, Panel } from "../components/ui";
+import { Button, EmptyState, ErrorNote, Panel, TextInput } from "../components/ui";
 import { ProjectRow } from "../components/ProjectRow";
 import "./Projects.css";
 
@@ -74,11 +74,10 @@ export function Projects() {
                   <label className="sr-only" htmlFor={`nombre-${project.id}`}>
                     Nombre del proyecto
                   </label>
-                  <input
+                  <TextInput
                     id={`nombre-${project.id}`}
-                    className="input"
                     value={draftName}
-                    onChange={(event) => setDraftName(event.target.value)}
+                    onChange={setDraftName}
                     autoFocus
                   />
                   <Button variant="primary" size="sm" type="submit" loading={rename.isPending}>

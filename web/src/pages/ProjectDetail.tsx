@@ -3,7 +3,9 @@ import { useParams } from "react-router-dom";
 
 import { api } from "../lib/api";
 import { duration, shortDate, timecode } from "../lib/format";
-import { EmptyState, ErrorNote, Panel } from "../components/ui";
+import Lozenge from "@atlaskit/lozenge";
+
+import { DownloadLink, EmptyState, ErrorNote, Panel } from "../components/ui";
 import { SourceTimeline } from "../components/SourceTimeline";
 import "./ProjectDetail.css";
 
@@ -79,9 +81,7 @@ export function ProjectDetail() {
                   </div>
                 )}
                 {clip.path && (
-                  <a className="btn btn--sm" href={api.clipFileUrl(clip.id, true)} download>
-                    Descargar
-                  </a>
+                  <DownloadLink href={api.clipFileUrl(clip.id, true)}>Descargar</DownloadLink>
                 )}
               </li>
             ))}
@@ -110,8 +110,10 @@ export function ProjectDetail() {
                   {timecode(highlight.start_time)} → {timecode(highlight.end_time)}
                   <span className="detail__duration">{duration(highlight.duration)}</span>
                 </span>
-                <span className={`chip chip--${highlight.selected ? "mark" : "standby"}`}>
-                  {highlight.selected ? "Elegido" : "Descartado"}
+                <span className="detail__flag">
+                  <Lozenge appearance={highlight.selected ? "inprogress" : "default"}>
+                    {highlight.selected ? "Elegido" : "Descartado"}
+                  </Lozenge>
                 </span>
               </li>
             ))}
