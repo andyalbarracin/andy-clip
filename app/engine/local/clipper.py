@@ -23,18 +23,40 @@ def _ratio(aspect_ratio: str) -> float:
 
 
 def _cut_subclip(source_path: str, start: float, end: float, out_path: str) -> str:
-    """ffmpeg -ss start -to end → re-encoded mp4 with audio."""
+    """Cut [start, end] out of the source into a re-encoded mp4 with audio.
+
+    `-ss` goes *before* `-i` so ffmpeg seeks to the start instead of decoding
+    the whole file from zero on every clip, and `-t` states a duration, which
+    is unambiguous after a seek.
+    """
+    duration = max(0.05, end - start)
     cmd = [
         "ffmpeg", "-y", "-loglevel", "error",
-        "-i", source_path,
         "-ss", f"{start:.3f}",
-        "-to", f"{end:.3f}",
+        "-i", source_path,
+        "-t", f"{duration:.3f}",
         "-c:v", "libx264", "-preset", "fast", "-crf", "20",
+        "-pix_fmt", "yuv420p",
         "-c:a", "aac", "-b:a", "128k",
         out_path,
     ]
     subprocess.run(cmd, check=True)
     return out_path
+
+
+def _load_face_detector(cv2_module):
+    """El detector de caras Haar, si esta instalación de OpenCV lo trae.
+
+    OpenCV 5 sacó `CascadeClassifier` del paquete principal. Cuando no está,
+    devolvemos `None` y el recorte queda centrado: peor encuadre, pero el clip
+    se genera igual en vez de fallar.
+    """
+    if not hasattr(cv2_module, "CascadeClassifier"):
+        return None
+
+    data_dir = getattr(getattr(cv2_module, "data", None), "haarcascades", "")
+    detector = cv2_module.CascadeClassifier(data_dir + "haarcascade_frontalface_default.xml")
+    return None if detector.empty() else detector
 
 
 def _reframe_vertical(in_path: str, out_path: str, aspect_ratio: str) -> str:
@@ -66,7 +88,12 @@ def _reframe_vertical(in_path: str, out_path: str, aspect_ratio: str) -> str:
     crop_w = max(2, crop_w - (crop_w % 2))
     crop_h = max(2, crop_h - (crop_h % 2))
 
-    face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_frontalface_default.xml")
+    face_detector = _load_face_detector(cv2)
+    if face_detector is None:
+        print(
+            "[clip/local] sin detector de caras disponible: recorte centrado",
+            flush=True,
+        )
 
     silent_path = out_path + ".silent.mp4"
     fourcc = cv2.VideoWriter_fourcc(*"mp4v")
@@ -79,8 +106,12 @@ def _reframe_vertical(in_path: str, out_path: str, aspect_ratio: str) -> str:
         if not ret:
             break
 
-        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(40, 40))
+        faces = ()
+        if face_detector is not None:
+            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            faces = face_detector.detectMultiScale(
+                gray, scaleFactor=1.1, minNeighbors=5, minSize=(40, 40)
+            )
         if len(faces) > 0:
             # Pick the largest face — usually the speaker.
             x, y, w, h = max(faces, key=lambda f: f[2] * f[3])
@@ -106,12 +137,17 @@ def _reframe_vertical(in_path: str, out_path: str, aspect_ratio: str) -> str:
     cap.release()
     writer.release()
 
-    # Mux audio from the cut clip back onto the silent reframed video.
+    # Mux the audio back onto the reframed video.
+    #
+    # OpenCV writes mp4v, which browsers refuse to play — copying that stream
+    # would produce a file the app itself can't preview. Re-encoding to H.264
+    # costs a little CPU and makes the clip playable everywhere.
     cmd = [
         "ffmpeg", "-y", "-loglevel", "error",
         "-i", silent_path,
         "-i", in_path,
-        "-c:v", "copy",
+        "-c:v", "libx264", "-preset", "fast", "-crf", "20",
+        "-pix_fmt", "yuv420p", "-movflags", "+faststart",
         "-c:a", "aac", "-b:a", "128k",
         "-map", "0:v:0", "-map", "1:a:0?",
         "-shortest",

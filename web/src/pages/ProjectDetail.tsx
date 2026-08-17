@@ -1,37 +1,88 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 import { useParams } from "react-router-dom";
-
-import { api } from "../lib/api";
-import { duration, shortDate, timecode } from "../lib/format";
 import Lozenge from "@atlaskit/lozenge";
 
-import { DownloadLink, EmptyState, ErrorNote, Panel } from "../components/ui";
+import { api, ApiError } from "../lib/api";
+import { duration, shortDate, timecode } from "../lib/format";
+import { Button, DownloadLink, EmptyState, ErrorNote, Panel } from "../components/ui";
+import { JobProgress } from "../components/JobProgress";
 import { SourceTimeline } from "../components/SourceTimeline";
 import "./ProjectDetail.css";
 
+const ACTIVE = ["pending", "queued", "processing"];
+
 export function ProjectDetail() {
   const { id = "" } = useParams();
+  const queryClient = useQueryClient();
+  const [actionError, setActionError] = useState<ApiError | null>(null);
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["project", id],
     queryFn: () => api.project(id),
+    // Mientras hay un trabajo en curso preguntamos seguido; cuando termina,
+    // dejamos de molestar al backend.
+    refetchInterval: (query) =>
+      ACTIVE.includes(query.state.data?.job?.status ?? "") ? 1500 : false,
+  });
+
+  const refresh = () => {
+    queryClient.invalidateQueries({ queryKey: ["project", id] });
+    queryClient.invalidateQueries({ queryKey: ["home"] });
+  };
+
+  const process = useMutation({
+    mutationFn: () => api.processProject(id),
+    onSuccess: () => {
+      setActionError(null);
+      refresh();
+    },
+    onError: (err: ApiError) => setActionError(err),
+  });
+
+  const cancel = useMutation({
+    mutationFn: (jobId: string) => api.cancelJob(jobId),
+    onSuccess: refresh,
+    onError: (err: ApiError) => setActionError(err),
   });
 
   if (isLoading) return <p className="muted">Cargando…</p>;
   if (error) return <ErrorNote message={(error as Error).message} />;
   if (!data) return null;
 
-  const { project, highlights, clips } = data;
+  const { project, highlights, clips, job } = data;
   const total = project.duration ?? project.transcript?.duration ?? 0;
+  const busy = ACTIVE.includes(job?.status ?? "");
 
   return (
     <div className="detail">
       <header className="detail__head">
-        <h1>{project.name}</h1>
+        <div className="detail__title">
+          <h1>{project.name}</h1>
+          <Button
+            variant="primary"
+            onClick={() => process.mutate()}
+            loading={process.isPending}
+            disabled={busy}
+          >
+            {clips.length > 0 ? "Procesar de nuevo" : "Procesar"}
+          </Button>
+        </div>
         <p className="detail__source mono">{project.source}</p>
       </header>
 
-      {project.error && <ErrorNote message={project.error} />}
+      {actionError && <ErrorNote message={actionError.message} action={actionError.action} />}
+      {project.error && !busy && <ErrorNote message={project.error} />}
+
+      {job && (busy || job.status === "failed") && (
+        <Panel>
+          <JobProgress
+            job={job}
+            cancelling={cancel.isPending}
+            onCancel={() => cancel.mutate(job.id)}
+          />
+        </Panel>
+      )}
 
       {/* La barra del material: dónde cae cada momento dentro del video. */}
       {total > 0 && highlights.length > 0 && (

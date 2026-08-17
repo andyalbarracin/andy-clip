@@ -1,0 +1,57 @@
+.job {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.job__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.job__state {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-weight: 500;
+}
+
+/* Las etapas van en columna, como un registro: se lee qué pasó y qué falta. */
+.job__stages {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.job__stage {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--ink-ghost);
+}
+
+.job__stage.is-done {
+  color: var(--ink-faint);
+}
+
+.job__stage.is-current {
+  color: var(--ink);
+  font-weight: 500;
+}
+
+.job__bullet {
+  text-align: center;
+  font-size: var(--text-xs);
+}
+
+.job__stage.is-done .job__bullet {
+  color: var(--waveform);
+}
+
+.job__stage.is-current .job__bullet {
+  color: var(--mark);
+}

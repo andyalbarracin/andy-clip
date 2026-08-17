@@ -1,0 +1,13 @@
+{
+  "name": "andy-clip",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Convertí videos largos en clips verticales.",
+  "scripts": {
+    "dev": "./start.sh dev",
+    "start": "./start.sh",
+    "build": "cd web && npm install && npm run build",
+    "test": "cd web && npm test",
+    "test:api": ".venv/bin/python -m pytest"
+  }
+}

@@ -11,7 +11,7 @@ requests>=2.31
 # Motor de procesamiento
 yt-dlp>=2024.1.1
 faster-whisper>=1.0.0
-opencv-python>=4.8.0
+opencv-python>=4.8,<5
 
 # Proveedores de IA
 openai>=1.0.0

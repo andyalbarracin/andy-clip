@@ -102,6 +102,10 @@ export const api = {
 
   transcript: (id: string) => request<Transcript>(`/api/projects/${id}/transcript`),
 
+  processProject: (id: string) => post<{ job: Job }>(`/api/projects/${id}/process`),
+
+  stages: () => request<{ stages: { id: string; label: string }[] }>("/api/jobs/stages"),
+
   job: (id: string) => request<{ job: Job }>(`/api/jobs/${id}`),
 
   cancelJob: (id: string) => post<{ job: Job }>(`/api/jobs/${id}/cancel`),

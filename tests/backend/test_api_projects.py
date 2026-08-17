@@ -221,3 +221,58 @@ def test_a_clip_without_file_is_a_404(client, projects_repo):
     )
 
     assert client.get("/api/clips/{0}/file".format(clip["id"])).status_code == 404
+
+
+# ── poner a procesar ─────────────────────────────────────────────────────────
+
+def test_processing_without_an_api_key_points_at_configuration(client):
+    project_id = _create(client).json()["project"]["id"]
+
+    response = client.post("/api/projects/{0}/process".format(project_id))
+
+    assert response.status_code == 400
+    error = response.json()["error"]
+    assert error["code"] in ("missing_credential", "dependency_missing")
+    if error["code"] == "missing_credential":
+        assert error["action"] == "settings/ai"
+
+
+def test_processing_queues_a_job(client, monkeypatch):
+    from app.api.routes import projects as projects_routes
+
+    monkeypatch.setattr(projects_routes, "build_runner", lambda *a, **k: lambda ctx: None)
+    project_id = _create(client).json()["project"]["id"]
+
+    response = client.post("/api/projects/{0}/process".format(project_id))
+
+    assert response.status_code == 202
+    job = response.json()["job"]
+    assert job["project_id"] == project_id
+    assert job["status"] in ("queued", "processing", "done")
+
+
+def test_only_one_video_processes_at_a_time(client, monkeypatch):
+    import threading
+
+    from app.api.routes import projects as projects_routes
+
+    release = threading.Event()
+    monkeypatch.setattr(
+        projects_routes,
+        "build_runner",
+        lambda *a, **k: lambda ctx: release.wait(5),
+    )
+
+    first = _create(client).json()["project"]["id"]
+    second = _create(client).json()["project"]["id"]
+    client.post("/api/projects/{0}/process".format(first))
+
+    response = client.post("/api/projects/{0}/process".format(second))
+    release.set()
+
+    assert response.status_code == 409
+    assert response.json()["error"]["code"] == "job_busy"
+
+
+def test_processing_an_unknown_project_is_a_404(client):
+    assert client.post("/api/projects/no-existe/process").status_code == 404

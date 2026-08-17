@@ -15,8 +15,16 @@ from ...models.jobs import JobRepository
 from ...models.projects import ProjectNotFound, ProjectRepository
 from ...schemas.projects import ProjectCreate, ProjectRename
 from ...services import diagnostics
+from ...services.job_manager import JobManager
+from ...services.pipeline import build_runner
 from ...services.sources import classify_source
-from ..deps import get_jobs, get_projects, get_secrets, get_settings_store
+from ..deps import (
+    get_job_manager,
+    get_jobs,
+    get_projects,
+    get_secrets,
+    get_settings_store,
+)
 
 router = APIRouter(tags=["proyectos"])
 
@@ -112,6 +120,27 @@ def delete_project(
     """
     projects.delete(project_id)
     return {"deleted": project_id, "files_kept": True}
+
+
+@router.post("/projects/{project_id}/process", status_code=202)
+def process_project(
+    project_id: str,
+    projects: ProjectRepository = Depends(get_projects),
+    jobs: JobRepository = Depends(get_jobs),
+    secrets: SecretsService = Depends(get_secrets),
+    store: SettingsStore = Depends(get_settings_store),
+    manager: JobManager = Depends(get_job_manager),
+) -> Dict[str, Any]:
+    """Poner el proyecto en la cola.
+
+    Todo lo que puede fallar por configuración —falta la API key, falta
+    FFmpeg— se comprueba acá, antes de encolar: es mejor enterarse ahora que
+    dentro de un trabajo que se va a caer en la mitad.
+    """
+    project = projects.get(project_id)
+    runner = build_runner(project, store.resolve(), secrets, projects)
+    job = manager.submit(project_id, runner)
+    return {"job": job}
 
 
 @router.get("/projects/{project_id}/transcript")
