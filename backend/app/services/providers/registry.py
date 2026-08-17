@@ -5,14 +5,14 @@ from typing import Callable, Dict, List, Optional
 
 from ...core.errors import ConfigurationError
 from ...core.secrets import SecretsService
-from ...core.settings import AppSettings
+from ...core.settings import PROVIDER_LABELS, AppSettings
 from .base import LLMProvider
 from .gemini_provider import SUGGESTED_MODELS as GEMINI_SUGGESTED
 from .gemini_provider import GeminiProvider
 from .openai_provider import SUGGESTED_MODELS as OPENAI_SUGGESTED
 from .openai_provider import OpenAIProvider
 
-LABELS: Dict[str, str] = {"openai": "OpenAI", "gemini": "Google Gemini"}
+LABELS: Dict[str, str] = PROVIDER_LABELS
 
 SUGGESTED_MODELS: Dict[str, List[str]] = {
     "openai": OPENAI_SUGGESTED,

@@ -183,6 +183,6 @@ class SecretsService:
 
 
 def _label(provider: str) -> str:
-    return {"openai": "OpenAI", "gemini": "Google Gemini", "muapi": "MuAPI"}.get(
-        provider, provider
-    )
+    from .settings import PROVIDER_LABELS
+
+    return PROVIDER_LABELS.get(provider, provider)

@@ -27,6 +27,14 @@ APP_NAME = "Andy Clip"
 APP_VERSION = "0.1.0"
 
 PROVIDERS: Tuple[str, ...] = ("openai", "gemini")
+
+# Nombre visible de cada proveedor, en un solo lugar.
+PROVIDER_LABELS: Dict[str, str] = {
+    "openai": "OpenAI",
+    "gemini": "Google Gemini",
+    "muapi": "MuAPI",
+}
+
 MODES: Tuple[str, ...] = ("local", "muapi")
 ASPECT_RATIOS: Tuple[str, ...] = ("9:16", "1:1", "4:5")
 RESOLUTIONS: Tuple[str, ...] = ("360", "480", "720", "1080")

@@ -50,3 +50,19 @@ def secrets_service(tmp_path):
     from backend.app.core.secrets import SecretsService
 
     return SecretsService(path=tmp_path / "secrets.json")
+
+
+@pytest.fixture
+def client(settings_store, secrets_service):
+    """Cliente HTTP con la configuración y los secrets apuntando a tmp_path."""
+    from fastapi.testclient import TestClient
+
+    from backend.app.api.deps import get_secrets, get_settings_store
+    from backend.app.main import create_app
+
+    app = create_app()
+    app.dependency_overrides[get_settings_store] = lambda: settings_store
+    app.dependency_overrides[get_secrets] = lambda: secrets_service
+    # raise_server_exceptions=False para poder verificar el handler de 500.
+    with TestClient(app, raise_server_exceptions=False) as test_client:
+        yield test_client
