@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 
 import { api, ApiError } from "../lib/api";
 import { ErrorNote, Field, Panel } from "../components/ui";
+import { ProviderCard } from "../components/ProviderCard";
 import "./Settings.css";
 
 /** De dónde salió el valor que estás viendo. */
@@ -26,12 +27,18 @@ export function Settings() {
     queryFn: () => api.settings(),
   });
 
+  const { data: ai } = useQuery({
+    queryKey: ["ai-settings"],
+    queryFn: () => api.aiSettings(),
+  });
+
   const update = useMutation({
     mutationFn: (patch: Record<string, unknown>) => api.updateSettings(patch),
     onSuccess: () => {
       setError(null);
       setSaved(true);
       queryClient.invalidateQueries({ queryKey: ["settings"] });
+      queryClient.invalidateQueries({ queryKey: ["ai-settings"] });
       window.setTimeout(() => setSaved(false), 2000);
     },
     onError: (err: ApiError) => setError(err),
@@ -50,6 +57,22 @@ export function Settings() {
       </div>
 
       {error && <ErrorNote message={error.message} action={error.action} />}
+
+      <Panel title="Inteligencia artificial">
+        <p className="muted small settings__intro">
+          Andy Clip usa un proveedor de IA solo para elegir los mejores momentos a
+          partir de la transcripción. Alcanza con configurar uno.
+        </p>
+
+        {ai?.providers.map((provider) => (
+          <ProviderCard
+            key={provider.id}
+            provider={provider}
+            isDefault={ai.default_provider === provider.id}
+            onMakeDefault={() => save({ ai: { provider: provider.id } })}
+          />
+        ))}
+      </Panel>
 
       <Panel title="Video">
         <div className="settings__grid">
