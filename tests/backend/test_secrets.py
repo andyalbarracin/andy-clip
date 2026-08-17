@@ -102,7 +102,7 @@ def test_invalid_keys_are_rejected(secrets_service, value):
 
 def test_unknown_provider_is_rejected(secrets_service):
     with pytest.raises(ConfigurationError):
-        secrets_service.set("anthropic", FAKE_KEY)
+        secrets_service.set("acme", FAKE_KEY)
 
 
 def test_corrupt_secrets_file_does_not_leak_content(secrets_service):

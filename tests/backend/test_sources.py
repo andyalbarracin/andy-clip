@@ -24,7 +24,7 @@ def test_http_url_is_accepted():
 
 
 def test_a_local_file_outside_the_project_is_allowed(tmp_path):
-    """La frontera PROJECT_ROOT limita a Claude, no a quien usa la app."""
+    """La frontera del repositorio limita al desarrollo, no a quien usa la app."""
     video = tmp_path / "charla.mp4"
     video.write_bytes(b"\x00")
 

@@ -1,7 +1,7 @@
 """Robustez frente a lo que devuelve el LLM.
 
 Estos tests apuntan al core tal como está (no lo modifican): documentan qué
-tolera hoy `shorts_generator.highlights`, que es de lo que va a depender la UI.
+tolera hoy `app.engine.highlights`, que es de lo que va a depender la UI.
 """
 from __future__ import annotations
 

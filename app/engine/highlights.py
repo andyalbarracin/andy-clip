@@ -1,6 +1,5 @@
 """Find the most viral-worthy highlights in a transcript.
 
-Logic ported from ViralVadoo's transcript_analysis/highlight_generator.py:
   - content-type / density detection
   - chunking for long videos with overlap
   - virality-criteria prompt

@@ -236,7 +236,7 @@ def test_build_provider_can_target_a_specific_provider(settings_store, secrets_s
 
 
 def test_build_llm_fn_plugs_into_the_original_core(settings_store, secrets_service, monkeypatch):
-    """El core sigue recibiendo un `llm_fn(prompt) -> str`, como lo dejó upstream."""
+    """El core sigue recibiendo un `llm_fn(prompt) -> str`."""
     from app.engine.highlights import get_highlights
 
     canned = json.dumps(

@@ -8,6 +8,7 @@ output/
 *.mp4
 .DS_Store
 
+
 # Andy Clip — app local
 .local/
 data/
@@ -16,7 +17,7 @@ temp/
 .coverage
 htmlcov/
 coverage.xml
-frontend/node_modules/
-frontend/dist/
+web/node_modules/
+web/dist/
 node_modules/
 *.log

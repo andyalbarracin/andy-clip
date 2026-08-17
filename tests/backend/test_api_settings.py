@@ -173,7 +173,7 @@ def test_validation_errors_never_echo_the_submitted_value(client):
 
 
 def test_unknown_provider_is_rejected(client):
-    response = client.put("/api/settings/ai/anthropic/key", json={"api_key": FAKE_KEY})
+    response = client.put("/api/settings/ai/acme/key", json={"api_key": FAKE_KEY})
 
     assert response.status_code == 400
 

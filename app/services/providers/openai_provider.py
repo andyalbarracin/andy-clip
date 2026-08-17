@@ -1,6 +1,6 @@
 """Proveedor OpenAI.
 
-Reproduce la llamada que ya hacía `shorts_generator/local/llm.py` para no
+Reproduce la llamada que ya hacía `app/engine/local/llm.py` para no
 cambiar el comportamiento del motor: mismo endpoint, misma temperatura.
 """
 from __future__ import annotations

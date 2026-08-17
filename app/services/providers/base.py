@@ -5,7 +5,7 @@ El pipeline nunca habla con un SDK directamente:
     FastAPI → ProcessingService → LLMProvider → OpenAI / Gemini → core
 
 El core sigue recibiendo una función `llm_fn(prompt) -> str` (así lo diseñó
-upstream), y `registry.build_llm_fn()` es el puente entre ambos mundos.
+así quedó diseñado), y `registry.build_llm_fn()` es el puente entre ambos mundos.
 """
 from __future__ import annotations
 

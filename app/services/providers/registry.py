@@ -56,7 +56,7 @@ def build_llm_fn(
 ) -> Callable[[str], str]:
     """Puente hacia el core: `get_highlights(..., llm_fn=build_llm_fn(...))`.
 
-    Mantiene el LLM pluggable tal como lo dejó upstream, sin acoplar el core a
+    Mantiene el LLM pluggable sin acoplar el motor a
     FastAPI ni a la configuración de la app.
     """
     llm_provider = build_provider(settings, secrets, provider)

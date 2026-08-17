@@ -72,7 +72,7 @@ def test_update_merges_instead_of_replacing_the_branch(settings_store):
 @pytest.mark.parametrize(
     "patch",
     [
-        {"ai": {"provider": "anthropic"}},
+        {"ai": {"provider": "acme"}},
         {"video": {"aspect_ratio": "16:9"}},
         {"video": {"num_clips": 0}},
         {"video": {"num_clips": 99}},
