@@ -29,6 +29,40 @@ def emit(event: str, **payload: Any) -> None:
     sys.stdout.flush()
 
 
+def _download_message(exc: Exception) -> str:
+    """Traducir un fallo de descarga a algo que se pueda accionar.
+
+    yt-dlp falla por muchos motivos distintos y su texto es para
+    desarrolladores. Estos son los casos que aparecen de verdad.
+    """
+    detail = str(exc).lower()
+
+    # El orden importa: varios mensajes de YouTube contienen "sign in", así que
+    # los casos específicos van antes que los generales.
+    if "the page needs to be reloaded" in detail or "nsig" in detail or "player" in detail:
+        return (
+            "YouTube cambió su sitio y la herramienta de descarga quedó vieja. "
+            "Hay que actualizar yt-dlp, que necesita Python 3.10 o superior."
+        )
+    if "age" in detail or "edad" in detail:
+        return "Ese video tiene restricción de edad y no lo podemos descargar."
+    if "your country" in detail or "copyright" in detail or "blocked" in detail:
+        return "Ese video está bloqueado en tu país o por derechos de autor."
+    if "private" in detail or "sign in" in detail or "log in" in detail or "login" in detail:
+        return "Ese video es privado o pide iniciar sesión, así que no lo podemos descargar."
+    if "unavailable" in detail or "removed" in detail or "not available" in detail:
+        return "Ese video ya no está disponible en la plataforma."
+    if "no space" in detail:
+        return "No queda espacio en el disco para descargar el video."
+    if "network" in detail or "timed out" in detail or "connection" in detail:
+        return "Se cortó la conexión mientras descargábamos el video. Probá de nuevo."
+
+    return (
+        "No pudimos descargar este video. La URL puede ser privada, estar "
+        "restringida o no ser compatible."
+    )
+
+
 def run(args: argparse.Namespace) -> int:
     # Importar acá adentro: así un fallo de dependencias sale como evento de
     # error y no como un traceback suelto antes de que nadie esté escuchando.
@@ -41,7 +75,11 @@ def run(args: argparse.Namespace) -> int:
     os.makedirs(args.out_dir, exist_ok=True)
 
     emit("stage", stage="downloading")
-    source_path = download_youtube_local(args.source, fmt=args.resolution, out_dir=args.out_dir)
+    try:
+        source_path = download_youtube_local(args.source, fmt=args.resolution, out_dir=args.out_dir)
+    except Exception as exc:  # noqa: BLE001 - traducimos, no escondemos
+        emit("error", message=_download_message(exc), detail=str(exc))
+        return 1
     emit("source", path=source_path)
 
     emit("stage", stage="transcribing")

@@ -18,8 +18,11 @@ const NAV = [
 const ESSENTIAL = ["ffmpeg", "faster_whisper", "openai", "gemini"];
 
 export function AppShell() {
+  // Misma clave que usa Diagnóstico, y la misma que invalidan las pantallas al
+  // guardar una credencial: si no coinciden, la barra lateral sigue mostrando
+  // "No configurado" después de cargar una clave.
   const { data } = useQuery({
-    queryKey: ["system-summary"],
+    queryKey: ["system-status"],
     queryFn: () => api.systemStatus(),
     staleTime: 30_000,
   });

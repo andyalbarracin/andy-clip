@@ -34,8 +34,9 @@ class GeminiProvider:
     # ── contrato ─────────────────────────────────────────────────────────────
 
     def generate(self, prompt: str) -> str:
+        client = self._client()
         try:
-            response = self._client().models.generate_content(
+            response = client.models.generate_content(
                 model=self.model,
                 contents=prompt,
                 config={
@@ -49,8 +50,13 @@ class GeminiProvider:
         return response.text or ""
 
     def list_models(self) -> List[str]:
+        # El cliente tiene que seguir vivo mientras se recorre el listado: lo
+        # que devuelve `models.list()` es perezoso, y si el cliente se
+        # recolecta antes de terminar de leerlo, cierra su conexión y el
+        # recorrido explota con "the client has been closed".
+        client = self._client()
         try:
-            listing = self._client().models.list()
+            listing = list(client.models.list())
         except Exception as exc:
             raise translate_provider_error(exc, self.label) from exc
 

@@ -208,3 +208,30 @@ def test_noise_from_the_engine_is_ignored(project, projects_repo):
     assert pipeline._handle_event(
         "[download/local] bajando el video...\n", FakeContext(), project["id"], projects_repo
     ) is None
+
+
+# ── traducción de fallos de descarga ─────────────────────────────────────────
+
+def test_download_failures_get_an_actionable_message():
+    from app.services.pipeline_worker import _download_message
+
+    casos = [
+        ("ERROR: [youtube] abc: The page needs to be reloaded.", "yt-dlp"),
+        ("ERROR: Private video. Sign in if you've been granted access", "privado"),
+        ("ERROR: Video unavailable", "ya no está disponible"),
+        ("ERROR: Sign in to confirm your age", "restricción de edad"),
+        ("ERROR: The uploader has not made this video available in your country", "bloqueado"),
+        ("algo raro que nunca vimos", "puede ser privada"),
+    ]
+
+    for detalle, esperado in casos:
+        assert esperado in _download_message(Exception(detalle))
+
+
+def test_the_download_message_never_leaks_the_raw_error():
+    from app.services.pipeline_worker import _download_message
+
+    mensaje = _download_message(Exception("ERROR: [youtube] abc: The page needs to be reloaded."))
+
+    assert "ERROR:" not in mensaje
+    assert "[youtube]" not in mensaje
