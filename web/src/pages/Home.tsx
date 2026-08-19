@@ -6,6 +6,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { api } from "../lib/api";
 import { shortDate, shortSource } from "../lib/format";
 import { Button, ButtonLink, EmptyState, Panel, TextInput } from "../components/ui";
+import { FilePicker } from "../components/FilePicker";
 import { ProjectRow } from "../components/ProjectRow";
 import "./Home.css";
 
@@ -54,6 +55,7 @@ export function Home() {
             onChange={setSource}
             placeholder="Pegá el link de YouTube o la ruta de un video de tu equipo"
           />
+          <FilePicker onPicked={(path) => navigate(`/procesar?source=${encodeURIComponent(path)}`)} />
           <Button variant="primary" type="submit" disabled={!source.trim()}>
             Continuar
             <ArrowRight size={15} strokeWidth={2} aria-hidden="true" />

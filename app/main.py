@@ -21,6 +21,7 @@ from fastapi.staticfiles import StaticFiles
 from .api.deps import get_database
 from .api.routes import health, jobs as jobs_routes, projects as projects_routes
 from .api.routes import settings as settings_routes
+from .api.routes import uploads as uploads_routes
 from .core.errors import AppError
 from .models.jobs import JobRepository
 from .core.logging import LOG_LEVEL, get_logger, setup_logging
@@ -120,6 +121,7 @@ def create_app() -> FastAPI:
     app.include_router(settings_routes.router, prefix="/api")
     app.include_router(projects_routes.router, prefix="/api")
     app.include_router(jobs_routes.router, prefix="/api")
+    app.include_router(uploads_routes.router, prefix="/api")
 
     mount_web(app)
 

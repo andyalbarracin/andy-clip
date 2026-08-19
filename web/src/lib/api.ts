@@ -38,9 +38,10 @@ const GENERIC_MESSAGE =
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   let response: Response;
   try {
+    const isForm = init?.body instanceof FormData;
     response = await fetch(path, {
       ...init,
-      headers: init?.body ? { "Content-Type": "application/json" } : undefined,
+      headers: init?.body && !isForm ? { "Content-Type": "application/json" } : undefined,
     });
   } catch {
     throw new ApiError(GENERIC_MESSAGE, "network_error", 0);
@@ -103,6 +104,24 @@ export const api = {
   transcript: (id: string) => request<Transcript>(`/api/projects/${id}/transcript`),
 
   processProject: (id: string) => post<{ job: Job }>(`/api/projects/${id}/process`),
+
+  /**
+   * Copiar un video del equipo a la carpeta de la aplicación.
+   *
+   * El navegador no puede entregar la ruta real de un archivo, así que hay que
+   * mandarle el contenido al backend. Como corre en la misma máquina, esto es
+   * una copia de disco a disco: no sale nada a internet.
+   */
+  uploadVideo: (file: File) => {
+    const body = new FormData();
+    body.append("file", file);
+    // Sin cabecera Content-Type a propósito: el navegador tiene que ponerla
+    // con el separador que genera para el formulario.
+    return request<{ path: string; name: string; size: number }>("/api/uploads", {
+      method: "POST",
+      body,
+    });
+  },
 
   stages: () => request<{ stages: { id: string; label: string }[] }>("/api/jobs/stages"),
 

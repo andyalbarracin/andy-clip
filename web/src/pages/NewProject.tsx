@@ -4,6 +4,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { api, ApiError } from "../lib/api";
 import { Button, Choice, ErrorNote, Field, Panel, TextInput } from "../components/ui";
+import { FilePicker } from "../components/FilePicker";
 import "./NewProject.css";
 
 const LANGUAGES = [
@@ -21,6 +22,7 @@ export function NewProject() {
 
   const [source, setSource] = useState(params.get("source") ?? "");
   const [name, setName] = useState("");
+  const [pickedName, setPickedName] = useState<string | null>(null);
   const [numClips, setNumClips] = useState<number | null>(null);
   const [aspectRatio, setAspectRatio] = useState<string | null>(null);
   const [resolution, setResolution] = useState<string | null>(null);
@@ -77,15 +79,34 @@ export function NewProject() {
             <Field
               label="Link o archivo"
               htmlFor="source"
-              hint="Un link de YouTube, otra URL compatible, o la ruta completa de un video de tu equipo."
+              hint={
+                pickedName
+                  ? `Vas a procesar «${pickedName}», que ya está en tu equipo.`
+                  : "Pegá un link de YouTube, o elegí un video de tu equipo. Un archivo local se salta la descarga."
+              }
             >
-              <TextInput
-                id="source"
-                value={source}
-                onChange={setSource}
-                placeholder="https://www.youtube.com/watch?v=…"
-                isRequired
-              />
+              <div className="new-project__source">
+                <TextInput
+                  id="source"
+                  value={source}
+                  onChange={(value) => {
+                    setSource(value);
+                    setPickedName(null);
+                  }}
+                  placeholder="https://www.youtube.com/watch?v=…"
+                  isRequired
+                />
+                <FilePicker
+                  onPicked={(path, name) => {
+                    setSource(path);
+                    setPickedName(name);
+                    setError(null);
+                  }}
+                  onError={(message) =>
+                    setError(new ApiError(message, "upload_failed", 400))
+                  }
+                />
+              </div>
             </Field>
 
             <Field
