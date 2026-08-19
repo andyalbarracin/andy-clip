@@ -12,6 +12,22 @@ from typing import Optional
 from ..config import LOCAL_OUTPUT_DIR
 
 
+DEFAULT_CLIENT = "default"
+
+# YouTube devuelve 403 al bajar el archivo según con qué cliente se presente
+# yt-dlp, y cuál funciona cambia con el tiempo. Los probamos en orden en vez de
+# atarnos a uno: el primero que baje el video gana.
+PLAYER_CLIENTS = (DEFAULT_CLIENT, "android", "ios", "tv", "web_safari", "mweb")
+
+
+def _player_clients() -> list:
+    """Orden de clientes a probar. Se puede pisar con LOCAL_YTDLP_CLIENTS."""
+    configured = os.getenv("LOCAL_YTDLP_CLIENTS", "").strip()
+    if configured:
+        return [c.strip() for c in configured.split(",") if c.strip()]
+    return list(PLAYER_CLIENTS)
+
+
 def _import_ytdlp():
     try:
         import yt_dlp  # type: ignore
@@ -111,6 +127,26 @@ def download_youtube_local(video_url: str, fmt: str = "720", out_dir: Optional[s
             return cached
 
     print(f"[download/local] {video_url} @ {fmt}p → {out_dir}/", flush=True)
+
+    last_error: Optional[Exception] = None
+    for client in _player_clients():
+        try:
+            path = _attempt_download(yt_dlp, video_url, fmt, out_dir, client)
+        except Exception as exc:  # noqa: BLE001 - probamos el siguiente cliente
+            last_error = exc
+            print(
+                f"[download/local] cliente {client!r} no sirvió: {str(exc)[:120]}",
+                flush=True,
+            )
+            continue
+
+        print(f"[download/local] ready ({client}): {path}", flush=True)
+        return path
+
+    raise last_error if last_error else RuntimeError("download failed")
+
+
+def _attempt_download(yt_dlp, video_url: str, fmt: str, out_dir: str, client: str) -> str:
     ydl_opts = {
         "format": _format_for(fmt),
         "outtmpl": os.path.join(out_dir, "source_%(id)s.%(ext)s"),
@@ -119,6 +155,8 @@ def download_youtube_local(video_url: str, fmt: str = "720", out_dir: Optional[s
         "no_warnings": True,
         "noprogress": True,
     }
+    if client != DEFAULT_CLIENT:
+        ydl_opts["extractor_args"] = {"youtube": {"player_client": [client]}}
 
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         info = ydl.extract_info(video_url, download=True)
@@ -131,5 +169,6 @@ def download_youtube_local(video_url: str, fmt: str = "720", out_dir: Optional[s
                     path = stem + ext
                     break
 
-    print(f"[download/local] ready: {path}", flush=True)
+    if not os.path.exists(path):
+        raise RuntimeError(f"yt-dlp reported success but {path} is missing")
     return path
