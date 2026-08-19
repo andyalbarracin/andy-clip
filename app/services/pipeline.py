@@ -111,6 +111,9 @@ def build_runner(
             "--aspect-ratio", options.aspect_ratio,
             "--resolution", options.resolution,
             "--language", options.language or "",
+            "--framing", options.framing,
+            "--background", options.background,
+            "--background-color", options.background_color,
         ]
 
         process = subprocess.Popen(

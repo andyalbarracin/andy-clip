@@ -34,6 +34,9 @@ export interface ProcessingOptions {
   aspect_ratio: string;
   resolution: string;
   language: string | null;
+  framing: string;
+  background: string;
+  background_color: string;
 }
 
 export interface Project {
@@ -134,6 +137,9 @@ export interface AppSettings {
     num_clips: number;
     resolution: string;
     output_dir: string;
+    framing: string;
+    background: string;
+    background_color: string;
   };
 }
 
@@ -145,6 +151,8 @@ export interface SettingsOptions {
   whisper_models: string[];
   whisper_devices: string[];
   max_clips: number;
+  framings: { id: string; label: string }[];
+  backgrounds: { id: string; label: string }[];
   suggested_models: Record<string, string[]>;
 }
 

@@ -119,6 +119,47 @@ export function Settings() {
           </Field>
 
           <Field
+            label="Encuadre predeterminado"
+            htmlFor="cfg-framing"
+            hint={
+              settings.video.framing === "fit"
+                ? "El video entra entero, sin perder zócalos ni subtítulos quemados."
+                : "Recorta a vertical: lo que quede fuera del cuadro se pierde."
+            }
+          >
+            <Choice
+              id="cfg-framing"
+              value={settings.video.framing}
+              onChange={(value) => save({ video: { framing: value } })}
+              options={options.framings.map((item) => ({ value: item.id, label: item.label }))}
+            />
+          </Field>
+
+          {settings.video.framing === "fit" && (
+            <Field label="Relleno de arriba y abajo" htmlFor="cfg-background">
+              <Choice
+                id="cfg-background"
+                value={settings.video.background}
+                onChange={(value) => save({ video: { background: value } })}
+                options={options.backgrounds.map((item) => ({ value: item.id, label: item.label }))}
+              />
+            </Field>
+          )}
+
+          {settings.video.framing === "fit" && settings.video.background === "color" && (
+            <Field label="Color del relleno" htmlFor="cfg-bgcolor">
+              <TextInput
+                id="cfg-bgcolor"
+                type="color"
+                defaultValue={settings.video.background_color}
+                onBlur={(event: React.FocusEvent<HTMLInputElement>) =>
+                  save({ video: { background_color: event.target.value.toUpperCase() } })
+                }
+              />
+            </Field>
+          )}
+
+          <Field
             label="Carpeta de resultados"
             htmlFor="cfg-output"
             hint="Relativa a la carpeta del proyecto."

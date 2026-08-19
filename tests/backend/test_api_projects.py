@@ -31,6 +31,9 @@ def test_creating_a_project_uses_the_configured_defaults(client):
         "aspect_ratio": "9:16",
         "resolution": "720",
         "language": None,
+        "framing": "faces",
+        "background": "blur",
+        "background_color": "#0A0B0C",
     }
 
 

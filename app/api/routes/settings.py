@@ -13,6 +13,8 @@ from ...core.errors import AppError, ConfigurationError
 from ...core.secrets import ENV_VARS, SECRET_PROVIDERS, SecretsService
 from ...core.settings import (
     ASPECT_RATIOS,
+    BACKGROUNDS,
+    FRAMINGS,
     MAX_CLIPS,
     MODES,
     PROVIDERS,
@@ -43,6 +45,16 @@ def _options() -> Dict[str, Any]:
         "resolutions": list(RESOLUTIONS),
         "whisper_models": list(WHISPER_MODELS),
         "whisper_devices": list(WHISPER_DEVICES),
+        "framings": [
+            {"id": "faces", "label": "Recortar siguiendo las caras"},
+            {"id": "center", "label": "Recortar por el centro"},
+            {"id": "fit", "label": "Video completo, con relleno"},
+        ],
+        "backgrounds": [
+            {"id": "blur", "label": "Desenfoque del propio video"},
+            {"id": "gradient", "label": "Degradado del propio video"},
+            {"id": "color", "label": "Color sólido"},
+        ],
         "max_clips": MAX_CLIPS,
         "suggested_models": SUGGESTED_MODELS,
     }

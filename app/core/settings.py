@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, Dict, Optional, Tuple
@@ -40,6 +41,10 @@ ASPECT_RATIOS: Tuple[str, ...] = ("9:16", "1:1", "4:5")
 RESOLUTIONS: Tuple[str, ...] = ("360", "480", "720", "1080")
 WHISPER_MODELS: Tuple[str, ...] = ("tiny", "base", "small", "medium", "large-v3")
 WHISPER_DEVICES: Tuple[str, ...] = ("auto", "cpu", "cuda")
+
+# Cómo se lleva un video horizontal al formato vertical.
+FRAMINGS: Tuple[str, ...] = ("faces", "center", "fit")
+BACKGROUNDS: Tuple[str, ...] = ("blur", "color", "gradient")
 
 MAX_CLIPS = 10
 
@@ -82,6 +87,22 @@ def validate_whisper_model(value: str) -> str:
 
 def validate_device(value: str) -> str:
     return _one_of(str(value or "").lower(), WHISPER_DEVICES, "Dispositivo")
+
+
+def validate_framing(value: str) -> str:
+    return _one_of(str(value or "").lower(), FRAMINGS, "Encuadre")
+
+
+def validate_background(value: str) -> str:
+    return _one_of(str(value or "").lower(), BACKGROUNDS, "Fondo")
+
+
+def validate_color(value: str) -> str:
+    """Un color hexadecimal. Va a parar a un comando de FFmpeg."""
+    value = str(value or "").strip()
+    if not re.fullmatch(r"#[0-9a-fA-F]{6}", value):
+        raise ValueError("El color tiene que ser hexadecimal, por ejemplo #101112.")
+    return value
 
 
 def validate_num_clips(value: int) -> int:
@@ -154,6 +175,24 @@ class VideoSettings(BaseModel):
     num_clips: int = 3
     resolution: str = "720"
     output_dir: str = "output"
+    framing: str = "faces"
+    background: str = "blur"
+    background_color: str = "#0A0B0C"
+
+    @field_validator("framing")
+    @classmethod
+    def _check_framing(cls, value: str) -> str:
+        return validate_framing(value)
+
+    @field_validator("background")
+    @classmethod
+    def _check_background(cls, value: str) -> str:
+        return validate_background(value)
+
+    @field_validator("background_color")
+    @classmethod
+    def _check_background_color(cls, value: str) -> str:
+        return validate_color(value)
 
     @field_validator("aspect_ratio")
     @classmethod
@@ -223,6 +262,24 @@ class ProcessingOptions(BaseModel):
     aspect_ratio: str = "9:16"
     resolution: str = "720"
     language: Optional[str] = None
+    framing: str = "faces"
+    background: str = "blur"
+    background_color: str = "#0A0B0C"
+
+    @field_validator("framing")
+    @classmethod
+    def _check_framing(cls, value: str) -> str:
+        return validate_framing(value)
+
+    @field_validator("background")
+    @classmethod
+    def _check_background(cls, value: str) -> str:
+        return validate_background(value)
+
+    @field_validator("background_color")
+    @classmethod
+    def _check_background_color(cls, value: str) -> str:
+        return validate_color(value)
 
     @field_validator("mode")
     @classmethod
@@ -260,6 +317,9 @@ def processing_options_for(
         "aspect_ratio": settings.video.aspect_ratio,
         "resolution": settings.video.resolution,
         "language": settings.transcription.language,
+        "framing": settings.video.framing,
+        "background": settings.video.background,
+        "background_color": settings.video.background_color,
     }
     data.update({k: v for k, v in (overrides or {}).items() if v is not None})
     try:
@@ -318,6 +378,9 @@ FIELD_SPECS: Tuple[FieldSpec, ...] = (
     FieldSpec("video.num_clips", "ANDY_CLIP_NUM_CLIPS", _as_int),
     FieldSpec("video.resolution", "ANDY_CLIP_RESOLUTION", _as_str),
     FieldSpec("video.output_dir", "LOCAL_OUTPUT_DIR", _as_str),
+    FieldSpec("video.framing", "ANDY_CLIP_FRAMING", _as_str),
+    FieldSpec("video.background", "ANDY_CLIP_BACKGROUND", _as_str),
+    FieldSpec("video.background_color", "ANDY_CLIP_BACKGROUND_COLOR", _as_str),
 )
 
 

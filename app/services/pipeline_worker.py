@@ -197,6 +197,10 @@ def run(args: argparse.Namespace) -> int:
                 float(highlight["end_time"]),
                 args.aspect_ratio,
                 out_path,
+                framing=args.framing,
+                background=args.background,
+                background_color=args.background_color,
+                width=int(args.resolution),
             )
         except Exception as exc:  # noqa: BLE001 - un clip roto no cancela el resto
             emit(
@@ -232,6 +236,9 @@ def main() -> int:
     parser.add_argument("--aspect-ratio", default="9:16")
     parser.add_argument("--resolution", default="720")
     parser.add_argument("--language", default="")
+    parser.add_argument("--framing", default="faces")
+    parser.add_argument("--background", default="blur")
+    parser.add_argument("--background-color", default="#0A0B0C")
     args = parser.parse_args()
 
     try:

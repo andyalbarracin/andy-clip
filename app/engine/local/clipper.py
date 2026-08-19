@@ -44,6 +44,76 @@ def _cut_subclip(source_path: str, start: float, end: float, out_path: str) -> s
     return out_path
 
 
+def _even(value: float) -> int:
+    """Los códecs de video piden dimensiones pares."""
+    number = max(2, int(round(value)))
+    return number - (number % 2)
+
+
+def _canvas(aspect_ratio: str, width: int) -> Tuple[int, int]:
+    """El lienzo final: el ancho lo elegís vos, el alto sale de la proporción."""
+    canvas_w = _even(width)
+    return canvas_w, _even(canvas_w / _ratio(aspect_ratio))
+
+
+def _fit_with_background(
+    in_path: str,
+    out_path: str,
+    aspect_ratio: str,
+    background: str,
+    color: str,
+    width: int,
+) -> str:
+    """Meter el cuadro completo dentro del formato, rellenando lo que sobra.
+
+    Recortar a vertical se come los costados, y con eso los zócalos y los
+    subtítulos que el video ya trae quemados. Acá no se recorta nada: el video
+    entra entero y arriba y abajo se rellena.
+
+    Todo en una sola pasada de FFmpeg, sin OpenCV: es bastante más rápido que
+    el reencuadre que sigue caras.
+    """
+    canvas_w, canvas_h = _canvas(aspect_ratio, width)
+    scaled = f"[0:v]scale={canvas_w}:-2[fg]"
+
+    if background == "color":
+        # Sin fondo derivado del video: un color plano y listo.
+        filtergraph = (
+            f"[0:v]scale={canvas_w}:-2,"
+            f"pad={canvas_w}:{canvas_h}:(ow-iw)/2:(oh-ih)/2:color={color}[v]"
+        )
+    elif background == "gradient":
+        # Un degradado hecho con los propios colores del video: se lo reduce a
+        # unos pocos píxeles y se lo vuelve a agrandar.
+        filtergraph = (
+            f"[0:v]scale=4:4,scale={canvas_w}:{canvas_h}:flags=bicubic,"
+            f"gblur=sigma=60,eq=brightness=-0.05[bg];{scaled};"
+            f"[bg][fg]overlay=(main_w-overlay_w)/2:(main_h-overlay_h)/2[v]"
+        )
+    else:  # blur
+        # El clásico: una copia del propio video, ampliada y desenfocada. Se
+        # oscurece apenas para que el cuadro real se despegue del fondo.
+        sigma = max(12, canvas_w // 24)
+        filtergraph = (
+            f"[0:v]scale={canvas_w}:{canvas_h}:force_original_aspect_ratio=increase,"
+            f"crop={canvas_w}:{canvas_h},gblur=sigma={sigma},eq=brightness=-0.08[bg];{scaled};"
+            f"[bg][fg]overlay=(main_w-overlay_w)/2:(main_h-overlay_h)/2[v]"
+        )
+
+    cmd = [
+        "ffmpeg", "-y", "-loglevel", "error",
+        "-i", in_path,
+        "-filter_complex", filtergraph,
+        "-map", "[v]", "-map", "0:a:0?",
+        "-c:v", "libx264", "-preset", "fast", "-crf", "20",
+        "-pix_fmt", "yuv420p", "-movflags", "+faststart",
+        "-c:a", "aac", "-b:a", "128k",
+        out_path,
+    ]
+    subprocess.run(cmd, check=True)
+    return out_path
+
+
 def _load_face_detector(cv2_module):
     """El detector de caras Haar, si esta instalación de OpenCV lo trae.
 
@@ -59,7 +129,9 @@ def _load_face_detector(cv2_module):
     return None if detector.empty() else detector
 
 
-def _reframe_vertical(in_path: str, out_path: str, aspect_ratio: str) -> str:
+def _reframe_vertical(
+    in_path: str, out_path: str, aspect_ratio: str, track_faces: bool = True
+) -> str:
     """Crop the cut clip to the target aspect ratio, tracking faces if possible."""
     try:
         import cv2  # type: ignore
@@ -88,8 +160,8 @@ def _reframe_vertical(in_path: str, out_path: str, aspect_ratio: str) -> str:
     crop_w = max(2, crop_w - (crop_w % 2))
     crop_h = max(2, crop_h - (crop_h % 2))
 
-    face_detector = _load_face_detector(cv2)
-    if face_detector is None:
+    face_detector = _load_face_detector(cv2) if track_faces else None
+    if track_faces and face_detector is None:
         print(
             "[clip/local] sin detector de caras disponible: recorte centrado",
             flush=True,
@@ -158,18 +230,39 @@ def _reframe_vertical(in_path: str, out_path: str, aspect_ratio: str) -> str:
     return out_path
 
 
+# Cómo se lleva el video al formato vertical.
+FRAMING_FACES = "faces"    # recorta siguiendo las caras
+FRAMING_CENTER = "center"  # recorta por el centro
+FRAMING_FIT = "fit"        # entra entero y se rellena arriba y abajo
+
+DEFAULT_BACKGROUND = "blur"
+DEFAULT_BACKGROUND_COLOR = "#0A0B0C"
+DEFAULT_WIDTH = 720
+
+
 def crop_clip_local(
     source_path: str,
     start_time: float,
     end_time: float,
     aspect_ratio: str,
     out_path: str,
+    framing: str = FRAMING_FACES,
+    background: str = DEFAULT_BACKGROUND,
+    background_color: str = DEFAULT_BACKGROUND_COLOR,
+    width: int = DEFAULT_WIDTH,
 ) -> str:
     """Cut + reframe one highlight, returning the local mp4 path."""
     cut_path = out_path + ".cut.mp4"
     try:
         _cut_subclip(source_path, start_time, end_time, cut_path)
-        _reframe_vertical(cut_path, out_path, aspect_ratio)
+        if framing == FRAMING_FIT:
+            _fit_with_background(
+                cut_path, out_path, aspect_ratio, background, background_color, width
+            )
+        else:
+            _reframe_vertical(
+                cut_path, out_path, aspect_ratio, track_faces=(framing == FRAMING_FACES)
+            )
     finally:
         if os.path.exists(cut_path):
             os.remove(cut_path)
@@ -181,6 +274,10 @@ def crop_highlights_local(
     highlights: List[Dict],
     aspect_ratio: str = "9:16",
     out_dir: Optional[str] = None,
+    framing: str = FRAMING_FACES,
+    background: str = DEFAULT_BACKGROUND,
+    background_color: str = DEFAULT_BACKGROUND_COLOR,
+    width: int = DEFAULT_WIDTH,
 ) -> List[Dict]:
     out_dir = out_dir or LOCAL_OUTPUT_DIR
     os.makedirs(out_dir, exist_ok=True)
@@ -195,6 +292,10 @@ def crop_highlights_local(
                 float(h["end_time"]),
                 aspect_ratio,
                 out_path,
+                framing=framing,
+                background=background,
+                background_color=background_color,
+                width=width,
             )
             results.append({**h, "clip_url": out_path})
         except Exception as e:

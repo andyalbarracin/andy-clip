@@ -145,3 +145,36 @@ def test_analysis_settings_mirror_the_core():
     analysis = analysis_settings()
     assert analysis.chunk_size_seconds == core_highlights.CHUNK_SIZE_SECONDS
     assert analysis.long_video_threshold_seconds == core_highlights.LONG_VIDEO_THRESHOLD
+
+
+# ── encuadre ─────────────────────────────────────────────────────────────────
+
+def test_framing_defaults_to_cropping_on_faces(settings_store):
+    video = settings_store.resolve().video
+
+    assert video.framing == "faces"
+    assert video.background == "blur"
+
+
+def test_fitting_the_whole_frame_can_be_chosen(settings_store):
+    settings_store.update({"video": {"framing": "fit", "background": "gradient"}})
+
+    video = settings_store.resolve().video
+    assert video.framing == "fit"
+    assert video.background == "gradient"
+
+
+@pytest.mark.parametrize(
+    "patch",
+    [
+        {"video": {"framing": "zoom"}},
+        {"video": {"background": "arcoiris"}},
+        {"video": {"background_color": "rojo"}},
+        {"video": {"background_color": "#GGG"}},
+        # Un color es texto que termina en un comando de FFmpeg.
+        {"video": {"background_color": "#000000; rm -rf /"}},
+    ],
+)
+def test_invalid_framing_values_are_rejected(settings_store, patch):
+    with pytest.raises(ConfigurationError):
+        settings_store.update(patch)

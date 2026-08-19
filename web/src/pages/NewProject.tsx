@@ -28,6 +28,8 @@ export function NewProject() {
   const [resolution, setResolution] = useState<string | null>(null);
   const [language, setLanguage] = useState<string | null>(null);
   const [mode, setMode] = useState<string | null>(null);
+  const [framing, setFraming] = useState<string | null>(null);
+  const [background, setBackground] = useState<string | null>(null);
   const [error, setError] = useState<ApiError | null>(null);
 
   const { data: settings } = useQuery({
@@ -55,6 +57,8 @@ export function NewProject() {
           ...(aspectRatio ? { aspect_ratio: aspectRatio } : {}),
           ...(resolution ? { resolution } : {}),
           ...(language !== null ? { language: language || null } : {}),
+          ...(framing ? { framing } : {}),
+          ...(background ? { background } : {}),
         },
       }),
     onSuccess: (detail) => navigate(`/proyectos/${detail.project.id}`),
@@ -170,6 +174,42 @@ export function NewProject() {
                 options={LANGUAGES}
               />
             </Field>
+          </div>
+
+          <div className="new-project__grid new-project__grid--four">
+            <Field
+              label="Encuadre"
+              htmlFor="framing"
+              hint={
+                (framing ?? defaults?.video.framing) === "fit"
+                  ? "El video entra entero: no se pierden zócalos ni subtítulos quemados."
+                  : "Recorta a vertical. Lo que quede fuera del cuadro se pierde."
+              }
+            >
+              <Choice
+                id="framing"
+                value={framing ?? defaults?.video.framing ?? "faces"}
+                onChange={setFraming}
+                options={(options?.framings ?? []).map((item) => ({
+                  value: item.id,
+                  label: item.label,
+                }))}
+              />
+            </Field>
+
+            {(framing ?? defaults?.video.framing) === "fit" && (
+              <Field label="Relleno de arriba y abajo" htmlFor="background">
+                <Choice
+                  id="background"
+                  value={background ?? defaults?.video.background ?? "blur"}
+                  onChange={setBackground}
+                  options={(options?.backgrounds ?? []).map((item) => ({
+                    value: item.id,
+                    label: item.label,
+                  }))}
+                />
+              </Field>
+            )}
           </div>
 
           <div className="new-project__mode">
