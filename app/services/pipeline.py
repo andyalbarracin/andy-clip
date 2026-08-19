@@ -15,7 +15,7 @@ from typing import Any, Callable, Dict, List, Optional
 
 from ..core.errors import AppError, DependencyMissingError
 from ..core.logging import get_logger
-from ..core.paths import OUTPUT_DIR, ensure_within
+from ..core.paths import DATA_DIR, OUTPUT_DIR, ensure_within
 from ..core.secrets import SecretsService
 from ..core.settings import AppSettings, ProcessingOptions
 from ..models.projects import ProjectRepository
@@ -25,6 +25,9 @@ from .job_manager import JobContext
 logger = get_logger("andy_clip.pipeline")
 
 WORKER_MODULE = "app.services.pipeline_worker"
+
+# Dónde se guardan los modelos de transcripción que faster-whisper descarga.
+MODELS_DIR = DATA_DIR / "models"
 
 
 def project_output_dir(project_id: str) -> Path:
@@ -41,6 +44,10 @@ def _child_env(settings: AppSettings, secrets: SecretsService, options: Processi
     env = dict(os.environ)
     env.update(
         {
+            # Los modelos de transcripción viven dentro del proyecto, no en la
+            # caché global del sistema: así borrar la carpeta de Andy Clip se
+            # lleva todo lo que ocupaba, sin dejar gigas huérfanos en ~/.cache.
+            "HF_HUB_CACHE": str(MODELS_DIR),
             "LLM_PROVIDER": settings.ai.provider,
             "OPENAI_MODEL": settings.ai.openai_model,
             "GEMINI_MODEL": settings.ai.gemini_model,

@@ -63,6 +63,23 @@ def _download_message(exc: Exception) -> str:
     )
 
 
+def _model_is_downloaded(model: str) -> bool:
+    """¿El modelo de transcripción ya está en disco?
+
+    faster-whisper los baja de Hugging Face a la carpeta que indique
+    `HF_HUB_CACHE`, con un nombre de la forma `models--Systran--faster-whisper-base`.
+    """
+    cache = os.getenv("HF_HUB_CACHE", "")
+    if not cache or not os.path.isdir(cache):
+        return False
+
+    sufijo = "faster-whisper-{0}".format(model)
+    return any(
+        entry.startswith("models--") and entry.endswith(sufijo)
+        for entry in os.listdir(cache)
+    )
+
+
 def run(args: argparse.Namespace) -> int:
     # Importar acá adentro: así un fallo de dependencias sale como evento de
     # error y no como un traceback suelto antes de que nadie esté escuchando.
@@ -82,7 +99,21 @@ def run(args: argparse.Namespace) -> int:
         return 1
     emit("source", path=source_path)
 
-    emit("stage", stage="transcribing")
+    model = os.getenv("LOCAL_WHISPER_MODEL", "base")
+    if _model_is_downloaded(model):
+        emit("stage", stage="transcribing")
+    else:
+        # Sin este aviso la primera corrida parece colgada durante varios
+        # minutos mientras baja el modelo.
+        emit(
+            "stage",
+            stage="transcribing",
+            message=(
+                "Descargando el modelo de transcripción «{0}». "
+                "Pasa una sola vez y puede tardar unos minutos.".format(model)
+            ),
+        )
+
     transcript = transcribe_local(source_path, language=args.language or None)
     if not transcript["segments"]:
         emit(

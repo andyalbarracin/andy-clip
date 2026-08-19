@@ -142,7 +142,8 @@ def mount_web(app: FastAPI) -> None:
         if assets.is_dir():
             app.mount("/assets", StaticFiles(directory=str(assets)), name="assets")
 
-    @app.get("/{full_path:path}", include_in_schema=False)
+    # HEAD además de GET: curl -I y cualquier chequeo de salud lo usan.
+    @app.api_route("/{full_path:path}", methods=["GET", "HEAD"], include_in_schema=False)
     async def serve_web(full_path: str):
         # Las rutas de API ya se resolvieron más arriba: si algo cae acá con
         # prefijo /api, es que no existe.
@@ -150,7 +151,15 @@ def mount_web(app: FastAPI) -> None:
             return _error_response(404, "not_found", "Esa dirección no existe.")
 
         if index.exists():
-            return FileResponse(str(index))
+            # El index.html nunca se cachea: adentro lleva los nombres de los
+            # archivos compilados, que cambian en cada build. Si el navegador se
+            # queda con uno viejo, pide hojas de estilo que ya no existen y la
+            # aplicación aparece sin estilos. Los assets sí se pueden cachear
+            # tranquilos porque llevan el hash del contenido en el nombre.
+            return FileResponse(
+                str(index),
+                headers={"Cache-Control": "no-store, must-revalidate"},
+            )
 
         return _error_response(
             503,

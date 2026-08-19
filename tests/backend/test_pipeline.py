@@ -235,3 +235,36 @@ def test_the_download_message_never_leaks_the_raw_error():
 
     assert "ERROR:" not in mensaje
     assert "[youtube]" not in mensaje
+
+
+# ── modelos de transcripción ─────────────────────────────────────────────────
+
+def test_the_models_live_inside_the_project(settings_store, secrets_service):
+    secrets_service.set("openai", FAKE_KEY)
+
+    env = pipeline._child_env(
+        settings_store.resolve(),
+        secrets_service,
+        pipeline.ProcessingOptions.model_validate(OPTIONS),
+    )
+
+    assert env["HF_HUB_CACHE"] == str(pipeline.MODELS_DIR)
+    assert "andy-clip" in env["HF_HUB_CACHE"]
+
+
+def test_it_knows_whether_the_model_still_has_to_be_downloaded(tmp_path, monkeypatch):
+    from app.services.pipeline_worker import _model_is_downloaded
+
+    monkeypatch.setenv("HF_HUB_CACHE", str(tmp_path))
+    assert _model_is_downloaded("base") is False
+
+    (tmp_path / "models--Systran--faster-whisper-base").mkdir()
+    assert _model_is_downloaded("base") is True
+    assert _model_is_downloaded("large-v3") is False
+
+
+def test_without_a_cache_folder_it_assumes_the_model_is_missing(monkeypatch):
+    from app.services.pipeline_worker import _model_is_downloaded
+
+    monkeypatch.delenv("HF_HUB_CACHE", raising=False)
+    assert _model_is_downloaded("base") is False

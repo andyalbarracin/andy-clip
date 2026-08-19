@@ -276,3 +276,15 @@ def test_only_one_video_processes_at_a_time(client, monkeypatch):
 
 def test_processing_an_unknown_project_is_a_404(client):
     assert client.post("/api/projects/no-existe/process").status_code == 404
+
+
+# ── la interfaz servida ──────────────────────────────────────────────────────
+
+def test_the_html_is_never_cached(client):
+    """El index.html nombra los archivos compilados: uno viejo deja la app sin estilos."""
+    response = client.get("/")
+
+    if response.status_code == 503:
+        return  # la interfaz no está compilada en este entorno
+
+    assert "no-store" in response.headers.get("cache-control", "")
