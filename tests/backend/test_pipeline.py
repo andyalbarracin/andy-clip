@@ -268,3 +268,43 @@ def test_without_a_cache_folder_it_assumes_the_model_is_missing(monkeypatch):
 
     monkeypatch.delenv("HF_HUB_CACHE", raising=False)
     assert _model_is_downloaded("base") is False
+
+
+# ── traducción de fallos del proveedor de IA ─────────────────────────────────
+
+def test_a_provider_without_credit_says_exactly_that(monkeypatch):
+    from app.services.pipeline_worker import _llm_message
+
+    monkeypatch.setenv("LLM_PROVIDER", "openai")
+    error = Exception(
+        "Error code: 429 - {'error': {'message': 'You exceeded your current quota', "
+        "'type': 'insufficient_quota'}}"
+    )
+
+    mensaje = _llm_message(error)
+
+    assert "sin saldo" in mensaje
+    assert "OpenAI" in mensaje
+    assert "Google Gemini" in mensaje  # ofrece la salida
+
+
+def test_the_message_names_the_provider_actually_in_use(monkeypatch):
+    from app.services.pipeline_worker import _llm_message
+
+    monkeypatch.setenv("LLM_PROVIDER", "gemini")
+
+    mensaje = _llm_message(Exception("insufficient_quota"))
+
+    assert "Google Gemini" in mensaje
+    assert mensaje.index("Google Gemini") < mensaje.index("OpenAI")
+
+
+def test_provider_failures_never_leak_the_raw_error(monkeypatch):
+    from app.services.pipeline_worker import _llm_message
+
+    monkeypatch.setenv("LLM_PROVIDER", "openai")
+
+    for crudo in ("Error code: 401 - invalid api key", "connection reset", "cualquier cosa"):
+        mensaje = _llm_message(Exception(crudo))
+        assert "Error code" not in mensaje
+        assert crudo not in mensaje

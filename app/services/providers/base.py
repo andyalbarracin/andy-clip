@@ -20,6 +20,18 @@ except ImportError:  # pragma: no cover
 from ...core.errors import ProviderAuthError, ProviderError
 
 
+# Lo más corto que se le puede pedir a un modelo para saber si responde.
+PING_PROMPT = "Respondé solo con la palabra: ok"
+
+
+def _safe_models(provider) -> List[str]:
+    """Los modelos para el selector. Si el listado falla, no arruina la prueba."""
+    try:
+        return provider.list_models()
+    except Exception:  # noqa: BLE001 - es información secundaria
+        return []
+
+
 @dataclass
 class ProviderTestResult:
     """Resultado de "Probar conexión". Nunca contiene la API key."""

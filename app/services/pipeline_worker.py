@@ -63,6 +63,44 @@ def _download_message(exc: Exception) -> str:
     )
 
 
+PROVIDER_LABELS = {"openai": "OpenAI", "gemini": "Google Gemini"}
+
+
+def _llm_message(exc: Exception) -> str:
+    """Traducir un fallo del proveedor de IA a algo que se pueda accionar."""
+    provider = os.getenv("LLM_PROVIDER", "openai").strip().lower()
+    label = PROVIDER_LABELS.get(provider, provider)
+    otro = "Google Gemini" if provider == "openai" else "OpenAI"
+    detail = str(exc).lower()
+
+    if "insufficient_quota" in detail or "exceeded your current quota" in detail:
+        return (
+            "Tu cuenta de {0} se quedó sin saldo, así que rechazó el análisis. "
+            "Cargá crédito, o cambiá el proveedor a {1} en Configuración."
+        ).format(label, otro)
+    if "rate limit" in detail or "429" in detail:
+        return (
+            "{0} está limitando los pedidos en este momento. Probá de nuevo en "
+            "un rato, o cambiá el proveedor a {1}."
+        ).format(label, otro)
+    if "api key" in detail or "unauthorized" in detail or "401" in detail:
+        return "{0} rechazó la API key configurada.".format(label)
+    if "model" in detail and ("not found" in detail or "does not exist" in detail):
+        return (
+            "El modelo configurado no está disponible en tu cuenta de {0}. "
+            "Elegí otro en Configuración."
+        ).format(label)
+    if "timeout" in detail or "timed out" in detail:
+        return "{0} tardó demasiado en responder. Probá de nuevo.".format(label)
+    if "connection" in detail or "network" in detail:
+        return "No pudimos conectarnos con {0}. Revisá tu conexión.".format(label)
+
+    return (
+        "{0} no pudo analizar el video. Revisá que la cuenta tenga saldo y que "
+        "el modelo elegido esté disponible."
+    ).format(label)
+
+
 def _model_is_downloaded(model: str) -> bool:
     """¿El modelo de transcripción ya está en disco?
 
@@ -124,7 +162,11 @@ def run(args: argparse.Namespace) -> int:
     emit("transcript", transcript=transcript)
 
     emit("stage", stage="analyzing")
-    result = get_highlights(transcript, num_clips=args.num_clips, llm_fn=call_local_llm)
+    try:
+        result = get_highlights(transcript, num_clips=args.num_clips, llm_fn=call_local_llm)
+    except Exception as exc:  # noqa: BLE001 - traducimos, no escondemos
+        emit("error", message=_llm_message(exc), detail=str(exc))
+        return 1
     candidates: List[Dict[str, Any]] = result.get("highlights", [])
     if not candidates:
         emit(

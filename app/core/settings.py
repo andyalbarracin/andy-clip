@@ -109,7 +109,7 @@ def validate_language(value: Optional[str]) -> Optional[str]:
 class AISettings(BaseModel):
     provider: str = "openai"
     openai_model: str = "gpt-4o-mini"
-    gemini_model: str = "gemini-2.5-flash"
+    gemini_model: str = "gemini-3.6-flash"
 
     @field_validator("provider")
     @classmethod

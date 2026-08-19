@@ -146,16 +146,27 @@ def test_openai_list_models_keeps_only_chat_models():
     assert provider.list_models() == ["gpt-4o", "gpt-4o-mini", "o3-mini"]
 
 
-def test_openai_test_connection_flags_an_unavailable_model():
-    provider = _with_client(
-        OpenAIProvider(api_key=FAKE_KEY, model="gpt-9000"),
-        FakeOpenAIClient(models=["gpt-4o-mini"]),
-    )
+def test_probing_a_provider_actually_generates():
+    """Listar modelos no alcanza: es gratis y funciona sin saldo, así que decía
+    que todo estaba bien y el procesamiento fallaba después."""
+    client = FakeOpenAIClient(completion="ok", models=["gpt-4o-mini"])
+    provider = _with_client(OpenAIProvider(api_key=FAKE_KEY, model="gpt-4o-mini"), client)
 
     result = provider.test_connection()
 
     assert result.ok is True
-    assert "gpt-9000" in result.message
+    assert client.last_request["model"] == "gpt-4o-mini"  # generó de verdad
+    assert result.models == ["gpt-4o-mini"]
+
+
+def test_a_provider_without_credit_fails_the_probe():
+    provider = _with_client(
+        OpenAIProvider(api_key=FAKE_KEY, model="gpt-4o-mini"),
+        FakeOpenAIClient(error=FakeRateLimitError("insufficient_quota")),
+    )
+
+    with pytest.raises(ProviderError):
+        provider.test_connection()
 
 
 def test_openai_test_connection_reports_a_bad_key():
@@ -166,6 +177,23 @@ def test_openai_test_connection_reports_a_bad_key():
 
     with pytest.raises(ProviderAuthError):
         provider.test_connection()
+
+
+def test_a_broken_model_listing_does_not_ruin_a_good_probe():
+    """Los modelos son para el selector: si fallan, la prueba sigue valiendo."""
+    class OnlyGenerates(FakeOpenAIClient):
+        def _list(self):
+            raise RuntimeError("el listado se cayó")
+
+    provider = _with_client(
+        OpenAIProvider(api_key=FAKE_KEY, model="gpt-4o-mini"),
+        OnlyGenerates(completion="ok"),
+    )
+
+    result = provider.test_connection()
+
+    assert result.ok is True
+    assert result.models == []
 
 
 # ─────────────────────────────────────────────────────────────────────────────

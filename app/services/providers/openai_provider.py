@@ -8,7 +8,7 @@ from __future__ import annotations
 from typing import List
 
 from ...core.errors import DependencyMissingError
-from .base import ProviderTestResult, translate_provider_error
+from .base import PING_PROMPT, ProviderTestResult, _safe_models, translate_provider_error
 
 # Lista de arranque para el selector. No pretende estar completa ni actualizada:
 # el botón "Actualizar modelos" consulta la API oficial y la reemplaza.
@@ -69,20 +69,14 @@ class OpenAIProvider:
         return sorted(set(models))
 
     def test_connection(self) -> ProviderTestResult:
-        models = self.list_models()
-        if models and self.model not in models:
-            return ProviderTestResult(
-                ok=True,
-                message=(
-                    "Conectamos con OpenAI, pero el modelo «{0}» no aparece entre los "
-                    "disponibles para esta cuenta.".format(self.model)
-                ),
-                models=models,
-            )
+        # Se prueba generando, no listando: listar modelos es gratis y funciona
+        # aunque la cuenta no tenga saldo, así que decía que todo estaba bien y
+        # después el procesamiento fallaba por falta de crédito.
+        self.generate(PING_PROMPT)
         return ProviderTestResult(
             ok=True,
-            message="Conectamos con OpenAI. El modelo «{0}» está disponible.".format(self.model),
-            models=models,
+            message="Listo: el modelo «{0}» respondió.".format(self.model),
+            models=_safe_models(self),
         )
 
 

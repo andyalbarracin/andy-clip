@@ -4,11 +4,11 @@ from __future__ import annotations
 from typing import List
 
 from ...core.errors import DependencyMissingError
-from .base import ProviderTestResult, translate_provider_error
+from .base import PING_PROMPT, ProviderTestResult, _safe_models, translate_provider_error
 
 # Igual que en OpenAI: punto de partida del selector, reemplazable con
 # "Actualizar modelos".
-SUGGESTED_MODELS: List[str] = ["gemini-2.5-flash", "gemini-2.5-pro", "gemini-2.0-flash"]
+SUGGESTED_MODELS: List[str] = ["gemini-3.6-flash", "gemini-3.5-flash", "gemini-3.1-flash-lite"]
 
 
 class GeminiProvider:
@@ -74,18 +74,12 @@ class GeminiProvider:
         return sorted(set(models))
 
     def test_connection(self) -> ProviderTestResult:
-        models = self.list_models()
-        if models and self.model not in models:
-            return ProviderTestResult(
-                ok=True,
-                message=(
-                    "Conectamos con Gemini, pero el modelo «{0}» no aparece entre los "
-                    "disponibles para esta API key.".format(self.model)
-                ),
-                models=models,
-            )
+        # Se prueba generando, no listando. El listado incluye modelos que la
+        # cuenta no puede usar: decía que todo estaba bien y después el
+        # procesamiento fallaba con un 404 en la mitad.
+        self.generate(PING_PROMPT)
         return ProviderTestResult(
             ok=True,
-            message="Conectamos con Gemini. El modelo «{0}» está disponible.".format(self.model),
-            models=models,
+            message="Listo: el modelo «{0}» respondió.".format(self.model),
+            models=_safe_models(self),
         )
