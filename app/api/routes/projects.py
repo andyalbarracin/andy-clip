@@ -13,7 +13,7 @@ from ...core.secrets import SecretsService
 from ...core.settings import SettingsStore, processing_options_for, validate_processing_options
 from ...models.jobs import JobRepository
 from ...models.projects import ProjectNotFound, ProjectRepository
-from ...schemas.projects import ProjectCreate, ProjectRename, RerenderBody
+from ...schemas.projects import HighlightEdit, ProjectCreate, ProjectRename, RerenderBody
 from ...services import diagnostics
 from ...services.job_manager import JobManager
 from ...services.pipeline import build_render_runner, build_runner
@@ -177,6 +177,57 @@ def read_transcript(
         "duration": transcript.get("duration", 0),
         "segments": transcript.get("segments", []),
     }
+
+
+@router.get("/projects/{project_id}/media")
+def read_project_media(
+    project_id: str,
+    projects: ProjectRepository = Depends(get_projects),
+) -> FileResponse:
+    """El video original, para poder previsualizar el recorte en la interfaz.
+
+    Sin esto el editor tendría que adivinar cómo va a quedar el corte. El
+    archivo puede estar fuera del proyecto —la persona lo eligió de su disco—
+    así que lo único que validamos es que sea el que este proyecto registró.
+    """
+    project = projects.get(project_id)
+    media_path = project.get("media_path")
+
+    if not media_path or not Path(media_path).is_file():
+        raise AppError(
+            "No tenemos el video original de este proyecto guardado.",
+            detail="missing media for project {0}".format(project_id),
+        )
+
+    return FileResponse(media_path, media_type="video/mp4")
+
+
+@router.patch("/projects/{project_id}/highlights/{highlight_id}")
+def edit_highlight(
+    project_id: str,
+    highlight_id: str,
+    body: HighlightEdit,
+    projects: ProjectRepository = Depends(get_projects),
+) -> Dict[str, Any]:
+    """Ajustar el recorte de un momento antes de volver a generarlo."""
+    actual = next(
+        (h for h in projects.highlights(project_id) if h["id"] == highlight_id), None
+    )
+    if actual is None:
+        raise ProjectNotFound("No encontramos ese momento.")
+
+    if body.selected is not None:
+        projects.set_highlight_selected(project_id, highlight_id, body.selected)
+
+    if body.start_time is not None or body.end_time is not None:
+        projects.update_highlight(
+            project_id,
+            highlight_id,
+            body.start_time if body.start_time is not None else actual["start_time"],
+            body.end_time if body.end_time is not None else actual["end_time"],
+        )
+
+    return {"highlights": projects.highlights(project_id)}
 
 
 @router.get("/projects/{project_id}/highlights")

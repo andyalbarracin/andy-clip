@@ -217,6 +217,44 @@ class ProjectRepository:
                 )
         return self.highlights(project_id)
 
+    def update_highlight(
+        self, project_id: str, highlight_id: str, start_time: float, end_time: float
+    ) -> Dict[str, Any]:
+        """Mover los puntos de entrada y salida de un momento.
+
+        Es lo que hace el recorte del editor: no se vuelve a analizar nada, solo
+        cambia de dónde a dónde se corta.
+        """
+        if end_time <= start_time:
+            raise AppError("El final tiene que ser posterior al comienzo.")
+        if start_time < 0:
+            raise AppError("El comienzo no puede ser negativo.")
+
+        with self.db.connect() as conn:
+            cursor = conn.execute(
+                "UPDATE highlights SET start_time = ?, end_time = ? "
+                "WHERE id = ? AND project_id = ?",
+                (float(start_time), float(end_time), highlight_id, project_id),
+            )
+            if cursor.rowcount == 0:
+                raise ProjectNotFound("No encontramos ese momento.")
+
+        return next(
+            h for h in self.highlights(project_id) if h["id"] == highlight_id
+        )
+
+    def set_highlight_selected(
+        self, project_id: str, highlight_id: str, selected: bool
+    ) -> None:
+        """Incluir o sacar un momento de los que se van a generar."""
+        with self.db.connect() as conn:
+            cursor = conn.execute(
+                "UPDATE highlights SET selected = ? WHERE id = ? AND project_id = ?",
+                (1 if selected else 0, highlight_id, project_id),
+            )
+            if cursor.rowcount == 0:
+                raise ProjectNotFound("No encontramos ese momento.")
+
     def highlights(self, project_id: str) -> List[Dict[str, Any]]:
         with self.db.connect() as conn:
             rows = conn.execute(

@@ -20,6 +20,14 @@ class RerenderBody(_Strict):
     background_color: Optional[str] = None
 
 
+class HighlightEdit(_Strict):
+    """Recorte de un momento: dónde empieza, dónde termina, si se genera."""
+
+    start_time: Optional[float] = Field(default=None, ge=0)
+    end_time: Optional[float] = Field(default=None, gt=0)
+    selected: Optional[bool] = None
+
+
 class ProcessingOptionsBody(_Strict):
     """Lo que la persona puede cambiar en el formulario de un proyecto.
 

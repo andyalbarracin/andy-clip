@@ -9,6 +9,7 @@
  */
 import type {
   AiSettingsPayload,
+  Highlight,
   HomePayload,
   Job,
   Project,
@@ -167,6 +168,20 @@ export const api = {
 
   refreshModels: (provider: string) =>
     post<{ models: string[] }>(`/api/settings/ai/${provider}/models`),
+
+  /** El video original del proyecto, para previsualizar el recorte. */
+  projectMediaUrl: (id: string) => `/api/projects/${id}/media`,
+
+  /** Mover los puntos de entrada y salida de un momento, o incluirlo o sacarlo. */
+  updateHighlight: (
+    projectId: string,
+    highlightId: string,
+    cambios: Partial<{ start_time: number; end_time: number; selected: boolean }>,
+  ) =>
+    request<{ highlights: Highlight[] }>(
+      `/api/projects/${projectId}/highlights/${highlightId}`,
+      { method: "PATCH", body: JSON.stringify(cambios) },
+    ),
 
   clipFileUrl: (clipId: string, download = false) =>
     `/api/clips/${clipId}/file${download ? "?download=true" : ""}`,

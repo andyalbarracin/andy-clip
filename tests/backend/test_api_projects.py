@@ -333,3 +333,107 @@ def test_rerendering_without_the_original_video_explains_why(client):
 
     assert response.status_code == 400
     assert "video original" in response.json()["error"]["message"]
+
+
+def test_an_unknown_api_route_answers_404_whatever_the_method(client):
+    """Un 405 manda a buscar el problema al lugar equivocado."""
+    for pedir in (client.post, client.put, client.patch, client.delete):
+        response = pedir("/api/no-existe")
+        assert response.status_code == 404
+        assert response.json()["error"]["code"] == "not_found"
+
+
+# ── editor: video original y recorte de momentos ─────────────────────────────
+
+def test_the_source_video_is_served_for_previewing(client, projects_repo, clip_file):
+    project_id = _create(client).json()["project"]["id"]
+    projects_repo.set_media_path(project_id, str(clip_file))
+
+    response = client.get("/api/projects/{0}/media".format(project_id))
+
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "video/mp4"
+
+
+def test_without_the_source_video_the_preview_says_so(client):
+    project_id = _create(client).json()["project"]["id"]
+
+    response = client.get("/api/projects/{0}/media".format(project_id))
+
+    assert response.status_code == 400
+    assert "video original" in response.json()["error"]["message"]
+
+
+def _momento(client, projects_repo, project_id):
+    projects_repo.replace_highlights(
+        project_id,
+        [{"title": "Momento", "start_time": 10.0, "end_time": 40.0, "score": 90}],
+        selected_count=1,
+    )
+    return projects_repo.highlights(project_id)[0]
+
+
+def test_trimming_moves_the_in_and_out_points(client, projects_repo):
+    project_id = _create(client).json()["project"]["id"]
+    momento = _momento(client, projects_repo, project_id)
+
+    response = client.patch(
+        "/api/projects/{0}/highlights/{1}".format(project_id, momento["id"]),
+        json={"start_time": 12.5, "end_time": 33.0},
+    )
+
+    assert response.status_code == 200
+    editado = response.json()["highlights"][0]
+    assert editado["start_time"] == 12.5
+    assert editado["end_time"] == 33.0
+    assert editado["duration"] == 20.5
+
+
+def test_trimming_only_one_end_keeps_the_other(client, projects_repo):
+    project_id = _create(client).json()["project"]["id"]
+    momento = _momento(client, projects_repo, project_id)
+
+    response = client.patch(
+        "/api/projects/{0}/highlights/{1}".format(project_id, momento["id"]),
+        json={"end_time": 25.0},
+    )
+
+    editado = response.json()["highlights"][0]
+    assert editado["start_time"] == 10.0
+    assert editado["end_time"] == 25.0
+
+
+def test_a_clip_cannot_end_before_it_starts(client, projects_repo):
+    project_id = _create(client).json()["project"]["id"]
+    momento = _momento(client, projects_repo, project_id)
+
+    response = client.patch(
+        "/api/projects/{0}/highlights/{1}".format(project_id, momento["id"]),
+        json={"start_time": 30.0, "end_time": 20.0},
+    )
+
+    assert response.status_code == 400
+    assert "posterior" in response.json()["error"]["message"]
+
+
+def test_a_moment_can_be_left_out_of_the_render(client, projects_repo):
+    project_id = _create(client).json()["project"]["id"]
+    momento = _momento(client, projects_repo, project_id)
+
+    response = client.patch(
+        "/api/projects/{0}/highlights/{1}".format(project_id, momento["id"]),
+        json={"selected": False},
+    )
+
+    assert response.json()["highlights"][0]["selected"] is False
+
+
+def test_editing_an_unknown_moment_is_a_404(client):
+    project_id = _create(client).json()["project"]["id"]
+
+    response = client.patch(
+        "/api/projects/{0}/highlights/no-existe".format(project_id),
+        json={"selected": True},
+    )
+
+    assert response.status_code == 404

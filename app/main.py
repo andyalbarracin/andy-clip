@@ -142,8 +142,13 @@ def mount_web(app: FastAPI) -> None:
         if assets.is_dir():
             app.mount("/assets", StaticFiles(directory=str(assets)), name="assets")
 
-    # HEAD además de GET: curl -I y cualquier chequeo de salud lo usan.
-    @app.api_route("/{full_path:path}", methods=["GET", "HEAD"], include_in_schema=False)
+    # Todos los métodos, no solo GET: un POST a una ruta de API que no existe
+    # tiene que contestar 404 con explicación, no un 405 que confunde.
+    @app.api_route(
+        "/{full_path:path}",
+        methods=["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE"],
+        include_in_schema=False,
+    )
     async def serve_web(full_path: str):
         # Las rutas de API ya se resolvieron más arriba: si algo cae acá con
         # prefijo /api, es que no existe.

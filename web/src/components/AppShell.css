@@ -149,3 +149,63 @@
     padding: var(--space-5) var(--space-4);
   }
 }
+
+/* ── Colapsada ────────────────────────────────────────────────────────────
+   Solo iconos. El ancho lo maneja el contenedor para que el lienzo se
+   ensanche al mismo tiempo, sin saltos. */
+.shell.is-collapsed {
+  grid-template-columns: 60px minmax(0, 1fr);
+}
+
+.shell.is-collapsed .rail__label,
+.shell.is-collapsed .rail__system-label,
+.shell.is-collapsed .rail__system-state {
+  display: none;
+}
+
+.shell.is-collapsed .rail__link,
+.shell.is-collapsed .rail__diagnostics {
+  justify-content: center;
+  padding-inline: 0;
+}
+
+.shell.is-collapsed .rail__system-item {
+  grid-template-columns: 9px;
+  justify-content: center;
+}
+
+.shell.is-collapsed .rail__head {
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.rail__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.rail__toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-1);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  color: var(--ink-faint);
+  cursor: pointer;
+  transition: background var(--fast) var(--ease), color var(--fast) var(--ease);
+}
+
+.rail__toggle:hover {
+  background: var(--room-raised);
+  border-color: var(--edge);
+  color: var(--ink);
+}
+
+.shell,
+.rail {
+  transition: grid-template-columns var(--medium) var(--ease);
+}

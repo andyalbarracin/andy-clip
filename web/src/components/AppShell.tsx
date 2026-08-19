@@ -1,5 +1,15 @@
 import { useQuery } from "@tanstack/react-query";
-import { Activity, Film, Home, Scissors, SlidersHorizontal, Wand2 } from "lucide-react";
+import {
+  Activity,
+  Film,
+  Home,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Scissors,
+  SlidersHorizontal,
+  Wand2,
+} from "lucide-react";
+import { useEffect, useState } from "react";
 import { NavLink, Outlet } from "react-router-dom";
 
 import { api } from "../lib/api";
@@ -18,7 +28,18 @@ const NAV = [
 /** Los tres componentes que definen si se puede procesar algo hoy. */
 const ESSENTIAL = ["ffmpeg", "faster_whisper", "openai", "gemini"];
 
+const COLAPSADA = "andy-clip:barra-colapsada";
+
 export function AppShell() {
+  // La preferencia sobrevive a recargar: quien la colapsa la quiere colapsada.
+  const [colapsada, setColapsada] = useState(
+    () => localStorage.getItem(COLAPSADA) === "1",
+  );
+
+  useEffect(() => {
+    localStorage.setItem(COLAPSADA, colapsada ? "1" : "0");
+  }, [colapsada]);
+
   // Misma clave que usa Diagnóstico, y la misma que invalidan las pantallas al
   // guardar una credencial: si no coinciden, la barra lateral sigue mostrando
   // "No configurado" después de cargar una clave.
@@ -33,11 +54,30 @@ export function AppShell() {
   );
 
   return (
-    <div className="shell">
+    <div className={`shell${colapsada ? " is-collapsed" : ""}`}>
       <aside className="rail">
-        {/* Marca tipográfica, no un logo: la aplicación todavía no necesita uno. */}
-        <div className="rail__mark">
-          Andy<span className="rail__mark-accent">Clip</span>
+        <div className="rail__head">
+          {/* Marca tipográfica, no un logo: la aplicación todavía no necesita uno. */}
+          <div className="rail__mark">
+            {colapsada ? (
+              <span className="rail__mark-accent">A</span>
+            ) : (
+              <>
+                Andy<span className="rail__mark-accent">Clip</span>
+              </>
+            )}
+          </div>
+
+          <button
+            type="button"
+            className="rail__toggle"
+            onClick={() => setColapsada((valor) => !valor)}
+            aria-label={colapsada ? "Expandir la barra lateral" : "Colapsar la barra lateral"}
+            aria-expanded={!colapsada}
+            title={colapsada ? "Expandir" : "Colapsar"}
+          >
+            {colapsada ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}
+          </button>
         </div>
 
         <nav aria-label="Secciones">
@@ -47,12 +87,13 @@ export function AppShell() {
                 <NavLink
                   to={to}
                   end={end}
+                  title={colapsada ? label : undefined}
                   className={({ isActive }) =>
                     `rail__link${isActive ? " is-active" : ""}`
                   }
                 >
                   <Icon size={16} strokeWidth={1.75} aria-hidden="true" />
-                  {label}
+                  <span className="rail__label">{label}</span>
                 </NavLink>
               </li>
             ))}
@@ -60,9 +101,13 @@ export function AppShell() {
         </nav>
 
         <div className="rail__foot">
-          <NavLink to="/configuracion/diagnostico" className="rail__diagnostics">
+          <NavLink
+            to="/configuracion/diagnostico"
+            className="rail__diagnostics"
+            title={colapsada ? "Diagnóstico" : undefined}
+          >
             <Activity size={14} strokeWidth={1.75} aria-hidden="true" />
-            Diagnóstico
+            <span className="rail__label">Diagnóstico</span>
           </NavLink>
           <ul className="rail__system">
             {components.map((component) => (
