@@ -57,38 +57,6 @@
   white-space: nowrap;
 }
 
-.chip::before {
-  content: "";
-  width: 6px;
-  height: 6px;
-  border-radius: 99px;
-  background: currentColor;
-}
-
-.chip--standby {
-  color: var(--standby);
-  background: var(--standby-dim);
-  border-color: var(--standby-dim);
-}
-
-.chip--mark {
-  color: var(--mark);
-  background: var(--mark-dim);
-  border-color: var(--mark-line);
-}
-
-.chip--waveform {
-  color: var(--waveform);
-  background: var(--waveform-dim);
-  border-color: var(--waveform-dim);
-}
-
-.chip--flag {
-  color: var(--flag);
-  background: var(--flag-dim);
-  border-color: var(--flag-dim);
-}
-
 @media (max-width: 760px) {
   .project-row {
     grid-template-columns: minmax(0, 1fr) auto;

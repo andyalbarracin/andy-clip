@@ -93,13 +93,13 @@ export function CanvasPreview({
         : undefined;
 
   return (
-    <div className="canvas" style={{ aspectRatio: String(ratioValue(aspectRatio)) }}>
+    <div className="preview" style={{ aspectRatio: String(ratioValue(aspectRatio)) }}>
       {entero && background === "blur" && (
         <video
           ref={(nodo) => {
             fondo.current = nodo;
           }}
-          className="canvas__blur"
+          className="preview__blur"
           src={src}
           muted
           playsInline
@@ -109,14 +109,14 @@ export function CanvasPreview({
       )}
 
       {entero && background !== "blur" && (
-        <div className="canvas__flat" style={fondoPlano} aria-hidden="true" />
+        <div className="preview__flat" style={fondoPlano} aria-hidden="true" />
       )}
 
       <video
         ref={(nodo) => {
           principal.current = nodo;
         }}
-        className={`canvas__video${entero ? " is-contained" : " is-cropped"}`}
+        className={`preview__video${entero ? " is-contained" : " is-cropped"}`}
         src={src}
         playsInline
         preload="metadata"
@@ -125,15 +125,15 @@ export function CanvasPreview({
       />
 
       {showGrid && (
-        <div className="canvas__grid" aria-hidden="true">
-          <span className="canvas__line canvas__line--v" style={{ left: "33.333%" }} />
-          <span className="canvas__line canvas__line--v" style={{ left: "66.666%" }} />
-          <span className="canvas__line canvas__line--h" style={{ top: "33.333%" }} />
-          <span className="canvas__line canvas__line--h" style={{ top: "66.666%" }} />
-          <span className="canvas__corner canvas__corner--tl" />
-          <span className="canvas__corner canvas__corner--tr" />
-          <span className="canvas__corner canvas__corner--bl" />
-          <span className="canvas__corner canvas__corner--br" />
+        <div className="preview__grid" aria-hidden="true">
+          <span className="preview__line preview__line--v" style={{ left: "33.333%" }} />
+          <span className="preview__line preview__line--v" style={{ left: "66.666%" }} />
+          <span className="preview__line preview__line--h" style={{ top: "33.333%" }} />
+          <span className="preview__line preview__line--h" style={{ top: "66.666%" }} />
+          <span className="preview__corner preview__corner--tl" />
+          <span className="preview__corner preview__corner--tr" />
+          <span className="preview__corner preview__corner--bl" />
+          <span className="preview__corner preview__corner--br" />
         </div>
       )}
     </div>

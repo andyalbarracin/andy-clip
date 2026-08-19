@@ -1,6 +1,6 @@
 /* El lienzo tiene la relación de aspecto de salida: lo que ves acá adentro es
    lo que va a quedar en el archivo. */
-.canvas {
+.preview {
   position: relative;
   max-height: 58vh;
   margin: 0 auto;
@@ -10,8 +10,8 @@
   overflow: hidden;
 }
 
-.canvas__blur,
-.canvas__flat {
+.preview__blur,
+.preview__flat {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -21,79 +21,79 @@
 
 /* Mismo tratamiento que aplica el motor: ampliado, desenfocado y apenas más
    oscuro para que el cuadro real se despegue. */
-.canvas__blur {
+.preview__blur {
   filter: blur(22px) brightness(0.82);
   transform: scale(1.15);
 }
 
-.canvas__video {
+.preview__video {
   position: relative;
   width: 100%;
   height: 100%;
   display: block;
 }
 
-.canvas__video.is-contained {
+.preview__video.is-contained {
   object-fit: contain;
 }
 
-.canvas__video.is-cropped {
+.preview__video.is-cropped {
   object-fit: cover;
 }
 
 /* Guías de tercios: ayudan a decidir el encuadre, no decoran. */
-.canvas__grid {
+.preview__grid {
   position: absolute;
   inset: 0;
   pointer-events: none;
 }
 
-.canvas__line {
+.preview__line {
   position: absolute;
   background: rgba(255, 255, 255, 0.22);
 }
 
-.canvas__line--v {
+.preview__line--v {
   top: 0;
   bottom: 0;
   width: 1px;
 }
 
-.canvas__line--h {
+.preview__line--h {
   left: 0;
   right: 0;
   height: 1px;
 }
 
-.canvas__corner {
+.preview__corner {
   position: absolute;
   width: 18px;
   height: 18px;
   border: 2px solid rgba(255, 255, 255, 0.85);
 }
 
-.canvas__corner--tl {
+.preview__corner--tl {
   top: 6px;
   left: 6px;
   border-right: 0;
   border-bottom: 0;
 }
 
-.canvas__corner--tr {
+.preview__corner--tr {
   top: 6px;
   right: 6px;
   border-left: 0;
   border-bottom: 0;
 }
 
-.canvas__corner--bl {
+.preview__corner--bl {
   bottom: 6px;
   left: 6px;
   border-right: 0;
   border-top: 0;
 }
 
-.canvas__corner--br {
+.preview__corner--br {
   bottom: 6px;
   right: 6px;
   border-left: 0;

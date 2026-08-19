@@ -123,7 +123,7 @@ export function AppShell() {
         </div>
       </aside>
 
-      <main className="canvas">
+      <main className="workspace">
         <Outlet />
       </main>
     </div>

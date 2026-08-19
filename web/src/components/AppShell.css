@@ -107,14 +107,15 @@
   color: var(--ink-ghost);
 }
 
-.canvas {
+.workspace {
   overflow-y: auto;
   padding: var(--space-7) var(--space-6);
 }
 
-.canvas > * {
-  max-width: var(--measure);
-  margin: 0 auto;
+/* El ancho lo decide cada pantalla, no el armazón. Una pantalla de lectura
+   quiere una medida cómoda; el editor quiere todo el espacio disponible. */
+.workspace > * {
+  width: 100%;
 }
 
 @media (max-width: 900px) {
@@ -145,7 +146,7 @@
     display: none;
   }
 
-  .canvas {
+  .workspace {
     padding: var(--space-5) var(--space-4);
   }
 }

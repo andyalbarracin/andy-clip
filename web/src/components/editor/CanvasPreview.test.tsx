@@ -15,10 +15,10 @@ describe("Vista previa del encuadre", () => {
       <CanvasPreview {...base} framing="faces" background="blur" />,
     );
 
-    expect(container.querySelector(".canvas__video")).toHaveClass("is-cropped");
+    expect(container.querySelector(".preview__video")).toHaveClass("is-cropped");
     // No hay relleno: no sobra espacio que rellenar.
-    expect(container.querySelector(".canvas__blur")).toBeNull();
-    expect(container.querySelector(".canvas__flat")).toBeNull();
+    expect(container.querySelector(".preview__blur")).toBeNull();
+    expect(container.querySelector(".preview__flat")).toBeNull();
   });
 
   it("entra entero y usa una copia desenfocada como fondo", () => {
@@ -26,8 +26,8 @@ describe("Vista previa del encuadre", () => {
       <CanvasPreview {...base} framing="fit" background="blur" />,
     );
 
-    expect(container.querySelector(".canvas__video")).toHaveClass("is-contained");
-    const fondo = container.querySelector(".canvas__blur");
+    expect(container.querySelector(".preview__video")).toHaveClass("is-contained");
+    const fondo = container.querySelector(".preview__blur");
     expect(fondo).toHaveAttribute("src", base.src);
     expect(fondo).toHaveAttribute("aria-hidden", "true");
   });
@@ -37,9 +37,9 @@ describe("Vista previa del encuadre", () => {
       <CanvasPreview {...base} framing="fit" background="color" />,
     );
 
-    const fondo = container.querySelector<HTMLElement>(".canvas__flat");
+    const fondo = container.querySelector<HTMLElement>(".preview__flat");
     expect(fondo?.style.background).toContain("rgb(32, 64, 128)");
-    expect(container.querySelector(".canvas__blur")).toBeNull();
+    expect(container.querySelector(".preview__blur")).toBeNull();
   });
 
   it("el degradado sale del color elegido", () => {
@@ -47,7 +47,7 @@ describe("Vista previa del encuadre", () => {
       <CanvasPreview {...base} framing="fit" background="gradient" />,
     );
 
-    const fondo = container.querySelector<HTMLElement>(".canvas__flat");
+    const fondo = container.querySelector<HTMLElement>(".preview__flat");
     expect(fondo?.style.background).toContain("gradient");
   });
 
@@ -57,7 +57,7 @@ describe("Vista previa del encuadre", () => {
     );
     // El navegador normaliza "0.5625" como "0.5625 / 1": comparamos el número.
     const proporcion = () => {
-      const crudo = container.querySelector<HTMLElement>(".canvas")?.style.aspectRatio ?? "";
+      const crudo = container.querySelector<HTMLElement>(".preview")?.style.aspectRatio ?? "";
       const [ancho, alto] = crudo.split("/").map((parte) => Number(parte.trim()));
       return alto ? ancho / alto : ancho;
     };
@@ -73,6 +73,6 @@ describe("Vista previa del encuadre", () => {
       <CanvasPreview {...base} framing="fit" background="blur" showGrid={false} />,
     );
 
-    expect(container.querySelector(".canvas__grid")).toBeNull();
+    expect(container.querySelector(".preview__grid")).toBeNull();
   });
 });

@@ -15,7 +15,7 @@
     "resolveJsonModule": true,
     "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": true,
-    "types": ["vite/client", "vitest/globals", "@testing-library/jest-dom"]
+    "types": ["node", "vite/client", "vitest/globals", "@testing-library/jest-dom"]
   },
   // vite.config.ts queda afuera a propósito: los tipos del plugin de Vite usan
   // sintaxis más nueva que el TypeScript 5.4 que pide Atlassian Design System.

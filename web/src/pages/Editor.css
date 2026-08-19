@@ -1,7 +1,12 @@
+/* El editor no se limita a la medida de lectura: acá el espacio es la
+   herramienta. El tope existe para que en una pantalla enorme el lienzo no
+   quede a un metro de los controles. */
 .editor {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
+  max-width: 1680px;
+  margin: 0 auto;
 }
 
 /* Barra superior compacta: elegir video y generar son las dos acciones que
