@@ -12,10 +12,11 @@ VIDEO LARGO → TRANSCRIPCIÓN → ANÁLISIS → MEJORES MOMENTOS → RECORTE �
 
 ## Empezar
 
-Necesitás Python 3.9 o superior, Node 18 o superior, y FFmpeg.
+Necesitás Python 3.10 o superior, Node 18 o superior, y FFmpeg.
 
 ```bash
 # macOS
+brew install python@3.13
 brew install ffmpeg
 
 # Ubuntu / Debian
