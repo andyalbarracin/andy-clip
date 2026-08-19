@@ -27,12 +27,13 @@ from .paths import LOCAL_DIR, PROJECT_ROOT, ensure_within
 APP_NAME = "Andy Clip"
 APP_VERSION = "0.1.0"
 
-PROVIDERS: Tuple[str, ...] = ("openai", "gemini")
+PROVIDERS: Tuple[str, ...] = ("openai", "gemini", "groq")
 
 # Nombre visible de cada proveedor, en un solo lugar.
 PROVIDER_LABELS: Dict[str, str] = {
     "openai": "OpenAI",
     "gemini": "Google Gemini",
+    "groq": "Groq",
     "muapi": "MuAPI",
 }
 
@@ -131,13 +132,14 @@ class AISettings(BaseModel):
     provider: str = "openai"
     openai_model: str = "gpt-4o-mini"
     gemini_model: str = "gemini-3.6-flash"
+    groq_model: str = "openai/gpt-oss-120b"
 
     @field_validator("provider")
     @classmethod
     def _check_provider(cls, value: str) -> str:
         return validate_provider(value)
 
-    @field_validator("openai_model", "gemini_model")
+    @field_validator("openai_model", "gemini_model", "groq_model")
     @classmethod
     def _check_model(cls, value: str) -> str:
         value = (value or "").strip()
@@ -379,6 +381,7 @@ FIELD_SPECS: Tuple[FieldSpec, ...] = (
     FieldSpec("ai.provider", "LLM_PROVIDER", _as_str),
     FieldSpec("ai.openai_model", "OPENAI_MODEL", _as_str),
     FieldSpec("ai.gemini_model", "GEMINI_MODEL", _as_str),
+    FieldSpec("ai.groq_model", "GROQ_MODEL", _as_str),
     FieldSpec("transcription.whisper_model", "LOCAL_WHISPER_MODEL", _as_str),
     FieldSpec("transcription.device", "LOCAL_WHISPER_DEVICE", _as_str),
     FieldSpec("transcription.vad_filter", "LOCAL_WHISPER_VAD_FILTER", _as_bool),

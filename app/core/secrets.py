@@ -25,11 +25,12 @@ from .paths import LOCAL_DIR
 
 SECRETS_FILENAME = "secrets.json"
 
-SECRET_PROVIDERS: Tuple[str, ...] = ("openai", "gemini", "muapi")
+SECRET_PROVIDERS: Tuple[str, ...] = ("openai", "gemini", "groq", "muapi")
 
 ENV_VARS: Dict[str, str] = {
     "openai": "OPENAI_API_KEY",
     "gemini": "GEMINI_API_KEY",
+    "groq": "GROQ_API_KEY",
     "muapi": "MUAPI_API_KEY",
 }
 

@@ -79,12 +79,19 @@ def test_muapi_mode_is_not_runnable_from_the_app_yet(
     assert "modo local" in excinfo.value.message
 
 
-def test_the_child_only_gets_the_key_of_the_chosen_provider(
-    settings_store, secrets_service, monkeypatch
+def test_the_chosen_provider_goes_first_and_the_rest_are_the_backup(
+    settings_store, secrets_service
 ):
+    """El hijo recibe las credenciales de todos los proveedores configurados.
+
+    Es a propósito: si el principal se queda sin saldo en la mitad del
+    análisis, el motor sigue con el siguiente en vez de perder el trabajo. El
+    proceso hijo es nuestro y corre en la misma máquina.
+    """
     secrets_service.set("openai", FAKE_KEY)
-    secrets_service.set("gemini", "otra-clave-distinta")
-    settings_store.update({"ai": {"provider": "openai"}})
+    secrets_service.set("gemini", "clave-de-gemini")
+    secrets_service.set("groq", "clave-de-groq")
+    settings_store.update({"ai": {"provider": "gemini"}})
 
     env = pipeline._child_env(
         settings_store.resolve(),
@@ -92,9 +99,27 @@ def test_the_child_only_gets_the_key_of_the_chosen_provider(
         pipeline.ProcessingOptions.model_validate(OPTIONS),
     )
 
-    assert env["OPENAI_API_KEY"] == FAKE_KEY
-    assert env.get("GEMINI_API_KEY") is None
-    assert env["LLM_PROVIDER"] == "openai"
+    assert env["LLM_PROVIDER"] == "gemini"
+    assert env["ANDY_CLIP_PROVIDER_ORDER"].split(",")[0] == "gemini"
+    assert set(env["ANDY_CLIP_PROVIDER_ORDER"].split(",")) == {"gemini", "openai", "groq"}
+    assert env["GEMINI_API_KEY"] == "clave-de-gemini"
+
+
+def test_a_provider_without_a_key_is_not_part_of_the_backup(
+    settings_store, secrets_service
+):
+    secrets_service.set("gemini", "clave-de-gemini")
+    settings_store.update({"ai": {"provider": "gemini"}})
+
+    env = pipeline._child_env(
+        settings_store.resolve(),
+        secrets_service,
+        pipeline.ProcessingOptions.model_validate(OPTIONS),
+    )
+
+    assert env["ANDY_CLIP_PROVIDER_ORDER"] == "gemini"
+    assert env.get("OPENAI_API_KEY") is None
+    assert env.get("GROQ_API_KEY") is None
 
 
 def test_each_project_writes_to_its_own_folder(project):

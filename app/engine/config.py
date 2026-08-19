@@ -15,7 +15,18 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "").strip()
 OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "").strip()
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.6-flash")
+GROQ_API_KEY = os.getenv("GROQ_API_KEY", "").strip()
+GROQ_MODEL = os.getenv("GROQ_MODEL", "openai/gpt-oss-120b")
+GROQ_BASE_URL = "https://api.groq.com/openai/v1"
 LLM_PROVIDER = os.getenv("LLM_PROVIDER", "openai").strip().lower()
+
+# Orden en el que se prueban los proveedores. El primero es el elegido; los
+# demás son la red de contención cuando uno se queda sin saldo o te limita.
+LLM_PROVIDER_ORDER = [
+    p.strip().lower()
+    for p in os.getenv("ANDY_CLIP_PROVIDER_ORDER", "").split(",")
+    if p.strip()
+] or [LLM_PROVIDER]
 LOCAL_WHISPER_MODEL = os.getenv("LOCAL_WHISPER_MODEL", "base")
 LOCAL_WHISPER_DEVICE = os.getenv("LOCAL_WHISPER_DEVICE", "auto")  # auto / cpu / cuda
 LOCAL_OUTPUT_DIR = os.getenv("LOCAL_OUTPUT_DIR", "output")
@@ -56,6 +67,14 @@ def require_openai_key() -> str:
             "Add it to your .env or export it, or switch back to --mode api."
         )
     return OPENAI_API_KEY
+
+
+def require_groq_key() -> str:
+    if not GROQ_API_KEY:
+        raise RuntimeError(
+            "GROQ_API_KEY is not set. Add it to your .env or export it."
+        )
+    return GROQ_API_KEY
 
 
 def require_gemini_key() -> str:

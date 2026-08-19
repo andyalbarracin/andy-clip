@@ -8,6 +8,8 @@ from ...core.secrets import SecretsService
 from ...core.settings import PROVIDER_LABELS, AppSettings
 from .base import LLMProvider
 from .gemini_provider import SUGGESTED_MODELS as GEMINI_SUGGESTED
+from .groq_provider import SUGGESTED_MODELS as GROQ_SUGGESTED
+from .groq_provider import GroqProvider
 from .gemini_provider import GeminiProvider
 from .openai_provider import SUGGESTED_MODELS as OPENAI_SUGGESTED
 from .openai_provider import OpenAIProvider
@@ -17,6 +19,7 @@ LABELS: Dict[str, str] = PROVIDER_LABELS
 SUGGESTED_MODELS: Dict[str, List[str]] = {
     "openai": OPENAI_SUGGESTED,
     "gemini": GEMINI_SUGGESTED,
+    "groq": GROQ_SUGGESTED,
 }
 
 
@@ -25,6 +28,8 @@ def model_for(settings: AppSettings, provider: str) -> str:
         return settings.ai.openai_model
     if provider == "gemini":
         return settings.ai.gemini_model
+    if provider == "groq":
+        return settings.ai.groq_model
     raise ConfigurationError("Proveedor de IA desconocido: {0!r}.".format(provider))
 
 
@@ -46,6 +51,8 @@ def build_provider(
         return OpenAIProvider(api_key=api_key, model=model)
     if name == "gemini":
         return GeminiProvider(api_key=api_key, model=model)
+    if name == "groq":
+        return GroqProvider(api_key=api_key, model=model)
     raise ConfigurationError("Proveedor de IA desconocido: {0!r}.".format(name))
 
 

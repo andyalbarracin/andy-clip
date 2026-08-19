@@ -21,8 +21,15 @@ _EXCLUDED_MODEL_MARKERS = (
 
 
 class OpenAIProvider:
+    """Cliente de la API de OpenAI.
+
+    Sirve también para cualquier servicio que hable el mismo protocolo: solo
+    cambia la dirección base. Groq es uno de ellos.
+    """
+
     name = "openai"
     label = "OpenAI"
+    base_url = None  # None = la de OpenAI
 
     def __init__(self, api_key: str, model: str, timeout: float = 60.0) -> None:
         self._api_key = api_key
@@ -39,6 +46,8 @@ class OpenAIProvider:
                 "Falta el paquete de OpenAI en este entorno.",
                 detail="pip install -r requirements-app.txt",
             ) from exc
+        if self.base_url:
+            return OpenAI(api_key=self._api_key, timeout=self._timeout, base_url=self.base_url)
         return OpenAI(api_key=self._api_key, timeout=self._timeout)
 
     # ── contrato ─────────────────────────────────────────────────────────────

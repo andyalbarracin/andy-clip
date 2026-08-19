@@ -60,8 +60,26 @@ export function Settings() {
       <Panel title="Inteligencia artificial">
         <p className="muted small settings__intro">
           Andy Clip usa un proveedor de IA solo para elegir los mejores momentos a
-          partir de la transcripción. Alcanza con configurar uno.
+          partir de la transcripción. Alcanza con configurar uno, pero si cargás
+          más de uno y el predeterminado se queda sin saldo o te limita los
+          pedidos, el procesamiento sigue con el siguiente en vez de perderse.
         </p>
+
+        {(ai?.providers ?? []).filter((p) => p.testable && p.configured).length > 1 && (
+          <p className="muted small settings__intro">
+            Orden de respaldo:{" "}
+            <strong>
+              {[
+                ai?.default_provider,
+                ...(ai?.providers ?? [])
+                  .filter((p) => p.testable && p.configured && p.id !== ai?.default_provider)
+                  .map((p) => p.id),
+              ]
+                .filter(Boolean)
+                .join(" → ")}
+            </strong>
+          </p>
+        )}
 
         {ai?.providers.map((provider) => (
           <ProviderCard

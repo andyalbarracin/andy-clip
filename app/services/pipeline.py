@@ -16,8 +16,13 @@ from typing import Any, Callable, Dict, List, Optional
 from ..core.errors import AppError, DependencyMissingError
 from ..core.logging import get_logger
 from ..core.paths import DATA_DIR, OUTPUT_DIR, ensure_within
-from ..core.secrets import SecretsService
-from ..core.settings import AppSettings, ProcessingOptions, validate_processing_options
+from ..core.secrets import ENV_VARS, SecretsService
+from ..core.settings import (
+    PROVIDERS,
+    AppSettings,
+    ProcessingOptions,
+    validate_processing_options,
+)
 from ..models.projects import ProjectRepository
 from .diagnostics import AVAILABLE, ffmpeg_status
 from .job_manager import JobContext
@@ -58,9 +63,19 @@ def _child_env(settings: AppSettings, secrets: SecretsService, options: Processi
         }
     )
 
-    # La credencial del proveedor elegido, y solo esa.
-    key = secrets.require(settings.ai.provider)
-    env["OPENAI_API_KEY" if settings.ai.provider == "openai" else "GEMINI_API_KEY"] = key
+    env["GROQ_MODEL"] = settings.ai.groq_model
+
+    # El proveedor elegido primero; detrás, los otros que tengan credencial.
+    # Si el principal se queda sin saldo en la mitad del análisis, el motor
+    # sigue con el siguiente en vez de perder todo el trabajo hecho.
+    elegido = settings.ai.provider
+    secrets.require(elegido)  # sin credencial no arrancamos
+
+    orden = [elegido] + [p for p in PROVIDERS if p != elegido and secrets.has(p)]
+    env["ANDY_CLIP_PROVIDER_ORDER"] = ",".join(orden)
+
+    for provider in orden:
+        env[ENV_VARS[provider]] = secrets.require(provider)
 
     if options.language:
         env["LOCAL_WHISPER_LANGUAGE"] = options.language
