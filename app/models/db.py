@@ -17,7 +17,7 @@ from typing import Iterator, Optional
 
 from ..core.paths import DATA_DIR
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 DEFAULT_DB_FILENAME = "andy-clip.db"
 
@@ -31,6 +31,7 @@ CREATE TABLE IF NOT EXISTS projects (
     settings      TEXT NOT NULL DEFAULT '{}',
     transcript    TEXT,
     duration      REAL,
+    media_path    TEXT,
     error         TEXT,
     created_at    TEXT NOT NULL,
     updated_at    TEXT NOT NULL
@@ -94,9 +95,22 @@ class Database:
         self.path.parent.mkdir(parents=True, exist_ok=True)
         with self._raw_connection() as conn:
             conn.executescript(SCHEMA)
+            self._migrate(conn)
             conn.execute("PRAGMA user_version = {0}".format(SCHEMA_VERSION))
             conn.commit()
         self._initialized = True
+
+    @staticmethod
+    def _migrate(conn: sqlite3.Connection) -> None:
+        """Poner al día una base creada por una versión anterior.
+
+        `CREATE TABLE IF NOT EXISTS` no agrega columnas nuevas a una tabla que
+        ya existe, así que las sumamos a mano. Son pocas y el proyecto es de un
+        solo usuario: no hace falta un sistema de migraciones.
+        """
+        columnas = {row["name"] for row in conn.execute("PRAGMA table_info(projects)")}
+        if "media_path" not in columnas:
+            conn.execute("ALTER TABLE projects ADD COLUMN media_path TEXT")
 
     @contextmanager
     def connect(self) -> Iterator[sqlite3.Connection]:

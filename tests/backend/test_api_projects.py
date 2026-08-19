@@ -291,3 +291,45 @@ def test_the_html_is_never_cached(client):
         return  # la interfaz no está compilada en este entorno
 
     assert "no-store" in response.headers.get("cache-control", "")
+
+
+# ── editor: volver a generar con otros ajustes ───────────────────────────────
+
+def test_rerendering_updates_the_saved_options(client, projects_repo, monkeypatch):
+    from app.api.routes import projects as projects_routes
+
+    monkeypatch.setattr(projects_routes, "build_render_runner", lambda *a, **k: lambda ctx: None)
+    project_id = _create(client).json()["project"]["id"]
+
+    response = client.post(
+        "/api/projects/{0}/rerender".format(project_id),
+        json={"framing": "fit", "background": "gradient"},
+    )
+
+    assert response.status_code == 202
+    settings = client.get("/api/projects/{0}".format(project_id)).json()["project"]["settings"]
+    assert settings["framing"] == "fit"
+    assert settings["background"] == "gradient"
+    # Lo que no se tocó queda como estaba.
+    assert settings["num_clips"] == 3
+
+
+def test_rerendering_rejects_an_invalid_framing(client):
+    project_id = _create(client).json()["project"]["id"]
+
+    response = client.post(
+        "/api/projects/{0}/rerender".format(project_id), json={"framing": "zoom"}
+    )
+
+    assert response.status_code in (400, 422)
+
+
+def test_rerendering_without_the_original_video_explains_why(client):
+    project_id = _create(client).json()["project"]["id"]
+
+    response = client.post(
+        "/api/projects/{0}/rerender".format(project_id), json={"framing": "fit"}
+    )
+
+    assert response.status_code == 400
+    assert "video original" in response.json()["error"]["message"]

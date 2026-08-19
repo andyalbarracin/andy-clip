@@ -1,0 +1,124 @@
+.editor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* Lista a la izquierda, trabajo a la derecha: se salta de un video a otro sin
+   perder de vista lo que se está retocando. */
+.editor__layout {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  gap: var(--space-4);
+  align-items: start;
+}
+
+.editor__work {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.editor__projects {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.editor__project {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  padding: var(--space-3);
+  text-align: left;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  color: var(--ink-soft);
+  cursor: pointer;
+  transition: background var(--fast) var(--ease), color var(--fast) var(--ease);
+}
+
+.editor__project:hover {
+  background: var(--room-overlay);
+  color: var(--ink);
+}
+
+.editor__project.is-selected {
+  background: var(--mark-dim);
+  border-color: var(--mark-line);
+  color: var(--ink);
+}
+
+.editor__project-name {
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.editor__project-meta {
+  font-size: var(--text-xs);
+  color: var(--ink-faint);
+}
+
+.editor__controls {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--space-4);
+}
+
+.editor__apply {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--edge-soft);
+}
+
+/* Los clips se muestran verticales, como son. */
+.editor__clips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+}
+
+.editor__clip {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: 168px;
+}
+
+.editor__video {
+  width: 168px;
+  aspect-ratio: 9 / 16;
+  background: var(--letterbox);
+  border: 1px solid var(--edge);
+  border-radius: var(--radius-md);
+}
+
+.editor__video--failed {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  text-align: center;
+  font-size: var(--text-xs);
+  color: var(--flag);
+  border-color: var(--flag-dim);
+}
+
+.editor__clip-meta {
+  font-size: var(--text-xs);
+  color: var(--ink-faint);
+}
+
+@media (max-width: 900px) {
+  .editor__layout {
+    grid-template-columns: 1fr;
+  }
+}

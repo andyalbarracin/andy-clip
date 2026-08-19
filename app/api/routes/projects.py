@@ -10,13 +10,13 @@ from fastapi.responses import FileResponse
 from ...core.errors import AppError
 from ...core.paths import PROJECT_ROOT, ensure_within
 from ...core.secrets import SecretsService
-from ...core.settings import SettingsStore, processing_options_for
+from ...core.settings import SettingsStore, processing_options_for, validate_processing_options
 from ...models.jobs import JobRepository
 from ...models.projects import ProjectNotFound, ProjectRepository
-from ...schemas.projects import ProjectCreate, ProjectRename
+from ...schemas.projects import ProjectCreate, ProjectRename, RerenderBody
 from ...services import diagnostics
 from ...services.job_manager import JobManager
-from ...services.pipeline import build_runner
+from ...services.pipeline import build_render_runner, build_runner
 from ...services.sources import classify_source
 from ..deps import (
     get_job_manager,
@@ -139,6 +139,29 @@ def process_project(
     """
     project = projects.get(project_id)
     runner = build_runner(project, store.resolve(), secrets, projects)
+    job = manager.submit(project_id, runner)
+    return {"job": job}
+
+
+@router.post("/projects/{project_id}/rerender", status_code=202)
+def rerender_project(
+    project_id: str,
+    body: RerenderBody,
+    projects: ProjectRepository = Depends(get_projects),
+    manager: JobManager = Depends(get_job_manager),
+) -> Dict[str, Any]:
+    """Volver a generar los clips con otros ajustes.
+
+    No descarga, no transcribe y no llama a la IA: reusa el video y los momentos
+    que ya están guardados. Por eso el editor puede probar encuadres sin costo.
+    """
+    project = projects.get(project_id)
+
+    cambios = body.model_dump(exclude_unset=True, exclude_none=True)
+    options = validate_processing_options({**project["settings"], **cambios})
+
+    projects.update_settings(project_id, options.model_dump())
+    runner = build_render_runner({**project, "settings": options.model_dump()}, options, projects)
     job = manager.submit(project_id, runner)
     return {"job": job}
 

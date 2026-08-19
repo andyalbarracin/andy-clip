@@ -141,6 +141,26 @@ class ProjectRepository:
                 (status, error, now_iso(), project_id),
             )
 
+    def update_settings(self, project_id: str, settings: Dict[str, Any]) -> None:
+        """Las opciones con las que se generó el resultado que estás viendo."""
+        with self.db.connect() as conn:
+            conn.execute(
+                "UPDATE projects SET settings = ?, updated_at = ? WHERE id = ?",
+                (json.dumps(settings, ensure_ascii=False), now_iso(), project_id),
+            )
+
+    def set_media_path(self, project_id: str, media_path: str) -> None:
+        """Dónde quedó el video de origen ya descargado.
+
+        Es lo que permite volver a generar los clips con otro encuadre sin
+        descargar, transcribir ni analizar de nuevo.
+        """
+        with self.db.connect() as conn:
+            conn.execute(
+                "UPDATE projects SET media_path = ?, updated_at = ? WHERE id = ?",
+                (media_path, now_iso(), project_id),
+            )
+
     def set_transcript(
         self, project_id: str, transcript: Dict[str, Any], duration: Optional[float] = None
     ) -> None:

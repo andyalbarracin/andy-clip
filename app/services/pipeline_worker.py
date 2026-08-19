@@ -118,6 +118,85 @@ def _model_is_downloaded(model: str) -> bool:
     )
 
 
+def _render_clips(crop_clip_local, chosen, source_path, args) -> None:
+    """Recortar y reencuadrar cada momento elegido."""
+    emit("stage", stage="rendering")
+    for index, highlight in enumerate(chosen, start=1):
+        emit(
+            "stage",
+            stage="reframing" if index > 1 else "rendering",
+            message="Generando video {0} de {1}".format(index, len(chosen)),
+            progress=(index - 1) / len(chosen),
+        )
+        out_path = os.path.join(args.out_dir, "clip_{0:02d}.mp4".format(index))
+        try:
+            crop_clip_local(
+                source_path,
+                float(highlight["start_time"]),
+                float(highlight["end_time"]),
+                args.aspect_ratio,
+                out_path,
+                framing=args.framing,
+                background=args.background,
+                background_color=args.background_color,
+                width=int(args.resolution),
+            )
+        except Exception as exc:  # noqa: BLE001 - un clip roto no cancela el resto
+            emit(
+                "clip",
+                position=index - 1,
+                path=None,
+                status="failed",
+                error=str(exc),
+                start_time=highlight["start_time"],
+                end_time=highlight["end_time"],
+            )
+            continue
+
+        emit(
+            "clip",
+            position=index - 1,
+            path=out_path,
+            status="done",
+            start_time=highlight["start_time"],
+            end_time=highlight["end_time"],
+            duration=float(highlight["end_time"]) - float(highlight["start_time"]),
+        )
+
+
+def render_only(args: argparse.Namespace) -> int:
+    """Volver a generar los clips de un proyecto ya analizado.
+
+    No descarga, no transcribe y no llama a la IA: el video ya está en disco y
+    los momentos ya están elegidos. Solo se recorta de nuevo, con las opciones
+    de encuadre nuevas.
+    """
+    from app.engine.local.clipper import crop_clip_local
+
+    if not os.path.isfile(args.source_path):
+        emit(
+            "error",
+            message=(
+                "No encontramos el video original de este proyecto. "
+                "Volvé a procesarlo desde cero."
+            ),
+            detail="missing media: {0}".format(args.source_path),
+        )
+        return 1
+
+    with open(args.clips_json, encoding="utf-8") as handle:
+        chosen = json.load(handle)
+
+    if not chosen:
+        emit("error", message="Este proyecto no tiene momentos para generar.")
+        return 1
+
+    os.makedirs(args.out_dir, exist_ok=True)
+    _render_clips(crop_clip_local, chosen, args.source_path, args)
+    emit("done")
+    return 0
+
+
 def run(args: argparse.Namespace) -> int:
     # Importar acá adentro: así un fallo de dependencias sale como evento de
     # error y no como un traceback suelto antes de que nadie esté escuchando.
@@ -181,48 +260,7 @@ def run(args: argparse.Namespace) -> int:
     ]
     emit("highlights", highlights=candidates, selected=len(chosen))
 
-    emit("stage", stage="rendering")
-    for index, highlight in enumerate(chosen, start=1):
-        emit(
-            "stage",
-            stage="reframing" if index > 1 else "rendering",
-            message="Generando video {0} de {1}".format(index, len(chosen)),
-            progress=(index - 1) / len(chosen),
-        )
-        out_path = os.path.join(args.out_dir, "clip_{0:02d}.mp4".format(index))
-        try:
-            crop_clip_local(
-                source_path,
-                float(highlight["start_time"]),
-                float(highlight["end_time"]),
-                args.aspect_ratio,
-                out_path,
-                framing=args.framing,
-                background=args.background,
-                background_color=args.background_color,
-                width=int(args.resolution),
-            )
-        except Exception as exc:  # noqa: BLE001 - un clip roto no cancela el resto
-            emit(
-                "clip",
-                position=index - 1,
-                path=None,
-                status="failed",
-                error=str(exc),
-                start_time=highlight["start_time"],
-                end_time=highlight["end_time"],
-            )
-            continue
-
-        emit(
-            "clip",
-            position=index - 1,
-            path=out_path,
-            status="done",
-            start_time=highlight["start_time"],
-            end_time=highlight["end_time"],
-            duration=float(highlight["end_time"]) - float(highlight["start_time"]),
-        )
+    _render_clips(crop_clip_local, chosen, source_path, args)
 
     emit("done")
     return 0
@@ -230,7 +268,7 @@ def run(args: argparse.Namespace) -> int:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Procesamiento de un proyecto de Andy Clip")
-    parser.add_argument("--source", required=True)
+    parser.add_argument("--source", default="")
     parser.add_argument("--out-dir", required=True)
     parser.add_argument("--num-clips", type=int, default=3)
     parser.add_argument("--aspect-ratio", default="9:16")
@@ -239,10 +277,13 @@ def main() -> int:
     parser.add_argument("--framing", default="faces")
     parser.add_argument("--background", default="blur")
     parser.add_argument("--background-color", default="#0A0B0C")
+    parser.add_argument("--render-only", action="store_true")
+    parser.add_argument("--source-path", default="")
+    parser.add_argument("--clips-json", default="")
     args = parser.parse_args()
 
     try:
-        return run(args)
+        return render_only(args) if args.render_only else run(args)
     except KeyboardInterrupt:
         return 130
     except Exception as exc:  # noqa: BLE001 - el detalle va al servidor, no al usuario

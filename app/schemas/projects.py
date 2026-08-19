@@ -10,6 +10,16 @@ class _Strict(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
+class RerenderBody(_Strict):
+    """Ajustes del editor. Todo opcional: lo que no venga queda como está."""
+
+    aspect_ratio: Optional[str] = None
+    resolution: Optional[str] = None
+    framing: Optional[str] = None
+    background: Optional[str] = None
+    background_color: Optional[str] = None
+
+
 class ProcessingOptionsBody(_Strict):
     """Lo que la persona puede cambiar en el formulario de un proyecto.
 

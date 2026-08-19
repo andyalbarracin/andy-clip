@@ -105,6 +105,18 @@ export const api = {
 
   processProject: (id: string) => post<{ job: Job }>(`/api/projects/${id}/process`),
 
+  /** Volver a generar los clips con otros ajustes, sin rehacer el análisis. */
+  rerenderProject: (
+    id: string,
+    ajustes: Partial<{
+      framing: string;
+      background: string;
+      background_color: string;
+      aspect_ratio: string;
+      resolution: string;
+    }>,
+  ) => post<{ job: Job }>(`/api/projects/${id}/rerender`, ajustes),
+
   /**
    * Copiar un video del equipo a la carpeta de la aplicación.
    *

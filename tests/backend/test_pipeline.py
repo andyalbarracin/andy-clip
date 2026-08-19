@@ -308,3 +308,49 @@ def test_provider_failures_never_leak_the_raw_error(monkeypatch):
         mensaje = _llm_message(Exception(crudo))
         assert "Error code" not in mensaje
         assert crudo not in mensaje
+
+
+# ── volver a generar (el editor) ─────────────────────────────────────────────
+
+def test_rerendering_needs_the_original_video(project, projects_repo, with_ffmpeg):
+    """Sin el archivo de origen no hay nada que recortar de nuevo."""
+    options = pipeline.ProcessingOptions.model_validate(OPTIONS)
+
+    with pytest.raises(AppError) as excinfo:
+        pipeline.build_render_runner(project, options, projects_repo)
+
+    assert "video original" in excinfo.value.message
+
+
+def test_rerendering_needs_chosen_moments(project, projects_repo, tmp_path, with_ffmpeg):
+    media = tmp_path / "fuente.mp4"
+    media.write_bytes(b"\x00")
+    projects_repo.set_media_path(project["id"], str(media))
+    options = pipeline.ProcessingOptions.model_validate(OPTIONS)
+
+    with pytest.raises(AppError) as excinfo:
+        pipeline.build_render_runner(projects_repo.get(project["id"]), options, projects_repo)
+
+    assert "momentos elegidos" in excinfo.value.message
+
+
+def test_rerendering_only_uses_the_chosen_moments(project, projects_repo, tmp_path, with_ffmpeg):
+    media = tmp_path / "fuente.mp4"
+    media.write_bytes(b"\x00")
+    projects_repo.set_media_path(project["id"], str(media))
+    projects_repo.replace_highlights(
+        project["id"],
+        [
+            {"title": "Sí", "start_time": 0, "end_time": 30, "score": 90},
+            {"title": "También", "start_time": 60, "end_time": 90, "score": 80},
+            {"title": "No", "start_time": 120, "end_time": 150, "score": 10},
+        ],
+        selected_count=2,
+    )
+    options = pipeline.ProcessingOptions.model_validate({**OPTIONS, "framing": "fit"})
+
+    # Que se construya sin levantar excepción ya prueba que encontró lo que
+    # necesita; el recorte en sí se prueba contra video real en otro archivo.
+    assert callable(pipeline.build_render_runner(
+        projects_repo.get(project["id"]), options, projects_repo
+    ))

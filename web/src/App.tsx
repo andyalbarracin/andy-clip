@@ -3,6 +3,7 @@ import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 
 import { AppShell } from "./components/AppShell";
 import { Diagnostics } from "./pages/Diagnostics";
+import { Editor } from "./pages/Editor";
 import { Home } from "./pages/Home";
 import { NewProject } from "./pages/NewProject";
 import { ProjectDetail } from "./pages/ProjectDetail";
@@ -30,6 +31,7 @@ export function App() {
             <Route path="proyectos" element={<Projects />} />
             <Route path="proyectos/:id" element={<ProjectDetail />} />
             <Route path="procesar" element={<NewProject />} />
+            <Route path="editor" element={<Editor />} />
             <Route path="configuracion" element={<Settings />} />
             <Route path="configuracion/diagnostico" element={<Diagnostics />} />
             <Route path="*" element={<Navigate to="/" replace />} />

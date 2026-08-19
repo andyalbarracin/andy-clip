@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Activity, Film, Home, Scissors, SlidersHorizontal } from "lucide-react";
+import { Activity, Film, Home, Scissors, SlidersHorizontal, Wand2 } from "lucide-react";
 import { NavLink, Outlet } from "react-router-dom";
 
 import { api } from "../lib/api";
@@ -11,6 +11,7 @@ const NAV = [
   { to: "/", label: "Inicio", icon: Home, end: true },
   { to: "/proyectos", label: "Proyectos", icon: Film, end: false },
   { to: "/procesar", label: "Procesar video", icon: Scissors, end: false },
+  { to: "/editor", label: "Editor", icon: Wand2, end: false },
   { to: "/configuracion", label: "Configuración", icon: SlidersHorizontal, end: false },
 ];
 

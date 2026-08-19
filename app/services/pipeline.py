@@ -17,7 +17,7 @@ from ..core.errors import AppError, DependencyMissingError
 from ..core.logging import get_logger
 from ..core.paths import DATA_DIR, OUTPUT_DIR, ensure_within
 from ..core.secrets import SecretsService
-from ..core.settings import AppSettings, ProcessingOptions
+from ..core.settings import AppSettings, ProcessingOptions, validate_processing_options
 from ..models.projects import ProjectRepository
 from .diagnostics import AVAILABLE, ffmpeg_status
 from .job_manager import JobContext
@@ -75,7 +75,7 @@ def build_runner(
     projects: ProjectRepository,
 ) -> Callable[[JobContext], None]:
     """Devolver el runner que la cola va a ejecutar para este proyecto."""
-    options = ProcessingOptions.model_validate(project["settings"])
+    options = validate_processing_options(project["settings"])
 
     if options.mode != "local":
         raise AppError(
@@ -116,46 +116,122 @@ def build_runner(
             "--background-color", options.background_color,
         ]
 
-        process = subprocess.Popen(
-            command,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            env=env,
-            text=True,
-            cwd=str(OUTPUT_DIR.parent),
-        )
-
-        # Cancelar es matar el proceso. El worker no tiene que colaborar.
-        ctx.on_cancel(lambda: _terminate(process))
-
-        failure: Optional[str] = None
-        try:
-            for line in process.stdout or []:
-                message = _handle_event(line, ctx, project["id"], projects)
-                if message:
-                    failure = message
-        finally:
-            stderr = (process.stderr.read() if process.stderr else "") or ""
-            process.wait()
-
-        if ctx.cancelled:
-            ctx.raise_if_cancelled()
-
-        if failure:
-            raise AppError(failure, detail=stderr.strip()[-2000:] or None)
-
-        if process.returncode != 0:
-            logger.warning("worker exited with %s: %s", process.returncode, stderr.strip()[-2000:])
-            raise AppError(
-                "El procesamiento se interrumpió antes de terminar.",
-                detail="worker exit {0}".format(process.returncode),
-            )
-
-        clips = projects.clips(project["id"])
-        if not any(clip["path"] for clip in clips):
-            raise AppError("No pudimos generar ningún clip de este video.")
+        _run_worker(command, env, ctx, project["id"], projects)
 
     return runner
+
+
+def build_render_runner(
+    project: Dict[str, Any],
+    options: ProcessingOptions,
+    projects: ProjectRepository,
+) -> Callable[[JobContext], None]:
+    """Volver a generar los clips con otro encuadre, sin rehacer el análisis.
+
+    Es lo que hace el editor: el video ya está bajado y los momentos ya están
+    elegidos, así que esto cuesta segundos y no gasta una sola llamada a la IA.
+    """
+    media_path = project.get("media_path")
+    if not media_path or not Path(media_path).is_file():
+        raise AppError(
+            "No tenemos el video original de este proyecto guardado, así que no "
+            "podemos volver a generar los clips. Procesalo de nuevo desde cero.",
+            detail="missing media_path for project {0}".format(project["id"]),
+        )
+
+    if ffmpeg_status().status != AVAILABLE:
+        raise DependencyMissingError(
+            "FFmpeg no está disponible en este equipo. Es necesario para generar "
+            "clips localmente.",
+            detail="ffmpeg missing",
+        )
+
+    chosen = [h for h in projects.highlights(project["id"]) if h["selected"]]
+    if not chosen:
+        raise AppError(
+            "Este proyecto todavía no tiene momentos elegidos para generar."
+        )
+
+    out_dir = project_output_dir(project["id"])
+
+    def runner(ctx: JobContext) -> None:
+        out_dir.mkdir(parents=True, exist_ok=True)
+        projects.clear_clips(project["id"])
+
+        clips_json = out_dir / "momentos.json"
+        clips_json.write_text(
+            json.dumps(
+                [
+                    {"start_time": h["start_time"], "end_time": h["end_time"]}
+                    for h in chosen
+                ]
+            ),
+            encoding="utf-8",
+        )
+
+        command = [
+            sys.executable, "-u", "-m", WORKER_MODULE,
+            "--render-only",
+            "--source-path", str(media_path),
+            "--clips-json", str(clips_json),
+            "--out-dir", str(out_dir),
+            "--aspect-ratio", options.aspect_ratio,
+            "--resolution", options.resolution,
+            "--framing", options.framing,
+            "--background", options.background,
+            "--background-color", options.background_color,
+        ]
+
+        _run_worker(command, dict(os.environ), ctx, project["id"], projects)
+
+    return runner
+
+
+def _run_worker(
+    command: List[str],
+    env: Dict[str, str],
+    ctx: JobContext,
+    project_id: str,
+    projects: ProjectRepository,
+) -> None:
+    """Ejecutar el proceso hijo y traducir sus eventos."""
+    process = subprocess.Popen(
+        command,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        env=env,
+        text=True,
+        cwd=str(OUTPUT_DIR.parent),
+    )
+
+    ctx.on_cancel(lambda: _terminate(process))
+
+    failure: Optional[str] = None
+    try:
+        for line in process.stdout or []:
+            message = _handle_event(line, ctx, project_id, projects)
+            if message:
+                failure = message
+    finally:
+        stderr = (process.stderr.read() if process.stderr else "") or ""
+        process.wait()
+
+    if ctx.cancelled:
+        ctx.raise_if_cancelled()
+
+    if failure:
+        raise AppError(failure, detail=stderr.strip()[-2000:] or None)
+
+    if process.returncode != 0:
+        logger.warning("worker exited with %s: %s", process.returncode, stderr.strip()[-2000:])
+        raise AppError(
+            "El procesamiento se interrumpió antes de terminar.",
+            detail="worker exit {0}".format(process.returncode),
+        )
+
+    clips = projects.clips(project_id)
+    if not any(clip["path"] for clip in clips):
+        raise AppError("No pudimos generar ningún clip de este video.")
 
 
 def _handle_event(
@@ -181,6 +257,8 @@ def _handle_event(
             message=event.get("message"),
             progress=event.get("progress"),
         )
+    elif kind == "source":
+        projects.set_media_path(project_id, event["path"])
     elif kind == "transcript":
         transcript = event["transcript"]
         projects.set_transcript(project_id, transcript, duration=transcript.get("duration"))

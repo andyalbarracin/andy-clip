@@ -307,6 +307,18 @@ class ProcessingOptions(BaseModel):
         return validate_language(value)
 
 
+def validate_processing_options(data: Dict[str, Any]) -> ProcessingOptions:
+    """Validar opciones de procesamiento devolviendo un error legible.
+
+    Sin esto, un valor inválido sale como `ValidationError` de pydantic y la
+    persona ve un 500 en vez de qué corregir.
+    """
+    try:
+        return ProcessingOptions.model_validate(data)
+    except ValidationError as exc:
+        raise ConfigurationError(_first_message(exc), detail=str(exc)) from exc
+
+
 def processing_options_for(
     settings: AppSettings, overrides: Optional[Dict[str, Any]] = None
 ) -> ProcessingOptions:
@@ -322,10 +334,7 @@ def processing_options_for(
         "background_color": settings.video.background_color,
     }
     data.update({k: v for k, v in (overrides or {}).items() if v is not None})
-    try:
-        return ProcessingOptions.model_validate(data)
-    except ValidationError as exc:
-        raise ConfigurationError(_first_message(exc), detail=str(exc)) from exc
+    return validate_processing_options(data)
 
 
 def analysis_settings() -> AnalysisSettings:

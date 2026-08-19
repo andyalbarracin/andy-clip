@@ -48,6 +48,7 @@ export interface Project {
   settings: ProcessingOptions;
   transcript: Transcript | null;
   duration: number | null;
+  media_path: string | null;
   error: string | null;
   created_at: string;
   updated_at: string;
